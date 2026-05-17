@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/gibsonmurray/verbatim/compare/v1.0.0...v1.1.0) (2026-05-17)
+
+### Features
+
+* update styles and add new dependencies for improved UI components ([ac8949b](https://github.com/gibsonmurray/verbatim/commit/ac8949b15aa66b847540c0a82a478948a5509b9e))
+
 ## 1.0.0 (2026-05-17)
 
 ### Features
