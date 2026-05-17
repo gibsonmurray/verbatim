@@ -42,6 +42,7 @@ export default function App() {
   );
 
   const sourceWords = useMemo(() => toWords(sourceText), [sourceText]);
+  const sourceDraftWords = useMemo(() => toWords(sourceDraft), [sourceDraft]);
   const typedWords = useMemo(() => typedWordsFrom(typedText), [typedText]);
   const hasTrailingSpace = endsWithSpace(typedText);
   const currentIndex = Math.min(
@@ -77,6 +78,7 @@ export default function App() {
     if (!normalized) return;
 
     setSourceText(normalized);
+    setSourceDraft(normalized);
     resetAttempt();
     setActiveOverlay(null);
   };
@@ -154,8 +156,7 @@ export default function App() {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-[min(980px,calc(100vw-32px))] flex-col gap-7 py-5 text-[var(--text)] min-[900px]:gap-10 min-[900px]:py-7"
-      data-theme={settings.theme}
+      className="mx-auto flex min-h-screen w-[min(980px,calc(100vw-32px))] flex-col gap-7 py-5 text-foreground min-[900px]:gap-10 min-[900px]:py-7"
       style={
         {
           "--word-size": `${settings.wordSize}px`,
@@ -194,22 +195,18 @@ export default function App() {
       {activeOverlay === "source" ? (
         <OverlayPanel title="source" onClose={() => setActiveOverlay(null)}>
           <SourcePanel
-            charCount={sourceText.length}
+            charCount={sourceDraft.length}
             onApplySource={applySource}
             onResetAttempt={resetAttempt}
             onSourceDraftChange={setSourceDraft}
             sourceDraft={sourceDraft}
-            wordCount={sourceWords.length}
+            wordCount={sourceDraftWords.length}
           />
         </OverlayPanel>
       ) : null}
 
       {activeOverlay === "settings" ? (
-        <OverlayPanel
-          title="settings"
-          placement="center"
-          onClose={() => setActiveOverlay(null)}
-        >
+        <OverlayPanel title="settings" onClose={() => setActiveOverlay(null)}>
           <SettingsPanel
             onLoad={loadSettings}
             onResetDefaults={restoreDefaults}

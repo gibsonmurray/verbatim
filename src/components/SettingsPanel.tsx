@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
-import type { PlaceholderStyle, Settings, Theme } from "../lib/settings";
+import type { PlaceholderStyle, Settings } from "../lib/settings";
 import { SettingToggle } from "./SettingToggle";
 
 type SettingsPanelProps = {
@@ -38,11 +38,6 @@ export function SettingsPanel({
   settings,
   status,
 }: SettingsPanelProps) {
-  const themeItems: Array<{ label: string; value: Theme }> = [
-    { label: "ember", value: "ember" },
-    { label: "mint", value: "mint" },
-    { label: "mono", value: "mono" },
-  ];
   const placeholderItems: Array<{ label: string; value: PlaceholderStyle }> = [
     { label: "bars", value: "bars" },
     { label: "dots", value: "dots" },
@@ -93,28 +88,6 @@ export function SettingsPanel({
         className="grid grid-cols-1 gap-x-3 gap-y-3.5 min-[500px]:grid-cols-2 min-[1180px]:grid-cols-2"
         aria-label="customization options"
       >
-        <Field>
-          <FieldLabel htmlFor="theme-select">theme</FieldLabel>
-          <Select
-            items={themeItems}
-            value={settings.theme}
-            onValueChange={(value) => onUpdateSetting("theme", value as Theme)}
-          >
-            <SelectTrigger id="theme-select" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {themeItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </Field>
-
         <Field>
           <FieldLabel htmlFor="placeholder-select">placeholders</FieldLabel>
           <Select

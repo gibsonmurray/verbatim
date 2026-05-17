@@ -18,7 +18,7 @@ export function PlaceholderWord({ expected, style }: PlaceholderWordProps) {
       >
         {Array.from({ length: dotCount }, (_, index) => (
           <span
-            className="size-[0.32em] rounded-full bg-[var(--placeholder)]"
+            className="size-[0.32em] rounded-full bg-muted"
             key={index}
           />
         ))}
@@ -34,8 +34,8 @@ export function PlaceholderWord({ expected, style }: PlaceholderWordProps) {
       <span
         className={
           style === "letters"
-            ? "h-[0.22em] border-b-2 border-[var(--placeholder)]"
-            : "h-[0.54em] rounded bg-linear-to-r from-[var(--placeholder)] to-[var(--placeholder-deep)] opacity-95"
+            ? "h-[0.22em] border-b-2 border-muted"
+            : "h-[0.54em] rounded bg-muted opacity-95"
         }
         style={{ width }}
       />

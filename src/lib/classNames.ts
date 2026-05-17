@@ -2,4 +2,4 @@ export const cx = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");
 
 export const meterClass =
-  "font-mono text-xs text-[var(--text-dim)] [letter-spacing:0]";
+  "font-mono text-xs text-muted-foreground [letter-spacing:0]";

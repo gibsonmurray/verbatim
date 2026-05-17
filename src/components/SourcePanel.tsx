@@ -46,7 +46,7 @@ export function SourcePanel({
             <FieldLabel htmlFor="source-draft">Text to memorize</FieldLabel>
             <Textarea
               id="source-draft"
-              className="min-h-[150px] resize-y font-mono text-sm leading-7 text-[var(--text)] caret-[var(--accent)] min-[900px]:min-h-[250px]"
+              className="min-h-[150px] resize-y font-mono text-sm leading-7 text-foreground caret-primary min-[900px]:min-h-[250px]"
               value={sourceDraft}
               onChange={(event) => onSourceDraftChange(event.target.value)}
               spellCheck={false}

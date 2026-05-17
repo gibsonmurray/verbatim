@@ -55,13 +55,15 @@ export function MemoryStage({
       </div>
 
       <div
-        className="flex min-h-[220px] flex-wrap content-start gap-x-3 gap-y-2.5 font-mono leading-[1.55] text-[min(var(--word-size),25px)] text-[color-mix(in_srgb,var(--text-dim)_44%,transparent)] select-none [letter-spacing:0] min-[900px]:min-h-[260px] min-[900px]:gap-x-4 min-[900px]:gap-y-3.5 min-[900px]:text-[var(--word-size)]"
+        className="flex min-h-[220px] flex-wrap content-start gap-x-3 gap-y-2.5 font-mono leading-[1.55] text-[min(var(--word-size),25px)] text-muted-foreground select-none [letter-spacing:0] min-[900px]:min-h-[260px] min-[900px]:gap-x-4 min-[900px]:gap-y-3.5 min-[900px]:text-[var(--word-size)]"
         aria-live="polite"
       >
         {sourceWords.map((word, index) => {
           const finishedCount = hasTrailingSpace
             ? typedWords.length
-            : Math.max(0, typedWords.length - 1);
+            : typedWords.length >= sourceWords.length
+              ? sourceWords.length
+              : Math.max(0, typedWords.length - 1);
           const isComplete = index < finishedCount;
           const typed = isComplete
             ? typedWords[index] ?? ""
@@ -105,7 +107,7 @@ export function MemoryStage({
 
       {stats.isDone ? (
         <div
-          className="absolute right-0 bottom-1.5 rounded-md bg-[var(--accent)] px-3 py-2 font-mono text-xs font-extrabold text-[var(--accent-ink)]"
+          className="absolute right-0 bottom-1.5 rounded-md bg-primary px-3 py-2 font-mono text-xs font-extrabold text-primary-foreground"
           role="status"
         >
           locked in

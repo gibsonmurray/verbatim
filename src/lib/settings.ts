@@ -1,6 +1,5 @@
 import { clamp } from "./text";
 
-export type Theme = "ember" | "mint" | "mono";
 export type PlaceholderStyle = "bars" | "dots" | "letters";
 
 export type Settings = {
@@ -8,7 +7,6 @@ export type Settings = {
   punctuationSensitive: boolean;
   accentSensitive: boolean;
   autoRevealCurrentWord: boolean;
-  theme: Theme;
   placeholderStyle: PlaceholderStyle;
   wordSize: number;
   hintStrength: number;
@@ -19,7 +17,6 @@ export const defaultSettings: Settings = {
   punctuationSensitive: true,
   accentSensitive: true,
   autoRevealCurrentWord: true,
-  theme: "ember",
   placeholderStyle: "bars",
   wordSize: 34,
   hintStrength: 56,
@@ -36,7 +33,6 @@ const isSettings = (value: unknown): value is Settings => {
     typeof settings.punctuationSensitive === "boolean" &&
     typeof settings.accentSensitive === "boolean" &&
     typeof settings.autoRevealCurrentWord === "boolean" &&
-    ["ember", "mint", "mono"].includes(String(settings.theme)) &&
     ["bars", "dots", "letters"].includes(String(settings.placeholderStyle)) &&
     typeof settings.wordSize === "number" &&
     Number.isFinite(settings.wordSize) &&
@@ -54,7 +50,11 @@ export const loadLocalSettings = () => {
     if (!isSettings(parsed)) return null;
 
     return {
-      ...parsed,
+      caseSensitive: parsed.caseSensitive,
+      punctuationSensitive: parsed.punctuationSensitive,
+      accentSensitive: parsed.accentSensitive,
+      autoRevealCurrentWord: parsed.autoRevealCurrentWord,
+      placeholderStyle: parsed.placeholderStyle,
       wordSize: clamp(parsed.wordSize, 24, 46),
       hintStrength: clamp(parsed.hintStrength, 25, 85),
     };

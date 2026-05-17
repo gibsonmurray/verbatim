@@ -29,7 +29,7 @@ export function SettingToggle({
         className="border-b border-border/70 py-2.5 first:pt-0"
       >
         <FieldContent>
-          <FieldTitle className="text-[var(--text)]">{label}</FieldTitle>
+          <FieldTitle className="text-foreground">{label}</FieldTitle>
           <FieldDescription>{description}</FieldDescription>
         </FieldContent>
         <Switch

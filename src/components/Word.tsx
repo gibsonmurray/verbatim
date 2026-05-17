@@ -16,7 +16,7 @@ type WordProps = {
 function TextCursor() {
   return (
     <span
-      className="mx-[1px] inline-block h-[1em] w-[2px] translate-y-[0.12em] animate-pulse rounded-full bg-[var(--accent)] align-baseline"
+      className="mx-[1px] inline-block h-[1em] w-[2px] translate-y-[0.12em] animate-pulse rounded-full bg-primary align-baseline"
       aria-hidden="true"
     />
   );
@@ -37,7 +37,7 @@ export function Word({
 
   if (index > currentIndex && isRevealed) {
     return (
-      <span className="inline-flex min-h-[1.45em] items-baseline whitespace-pre text-[var(--text-soft)] opacity-[var(--hint-opacity)]">
+      <span className="inline-flex min-h-[1.45em] items-baseline whitespace-pre text-muted-foreground opacity-[var(--hint-opacity)]">
         {expected}
       </span>
     );
@@ -50,8 +50,8 @@ export function Word({
         className={cx(
           "inline-flex min-h-[1.45em] items-baseline whitespace-pre",
           isCorrect
-            ? "text-[var(--text)]"
-            : "text-[#c06d67] underline decoration-2 underline-offset-[0.22em]",
+            ? "text-foreground"
+            : "text-destructive underline decoration-2 underline-offset-[0.22em]",
         )}
       >
         {typed}
@@ -68,7 +68,7 @@ export function Word({
   const cursorInsideExpected = typed.length <= expected.length;
 
   return (
-    <span className="inline-flex min-h-[1.45em] items-baseline whitespace-pre text-[var(--text-soft)]">
+    <span className="inline-flex min-h-[1.45em] items-baseline whitespace-pre text-muted-foreground">
       {characters.map((character, characterIndex) => {
         const typedCharacter = typed[characterIndex];
         const typedCharacterMatches =
@@ -78,11 +78,11 @@ export function Word({
         const className =
           typedCharacter === undefined
             ? isRevealed
-              ? "text-[var(--text-soft)] opacity-[var(--hint-opacity)]"
-              : "border-b-2 border-[var(--placeholder)] text-transparent"
+              ? "text-muted-foreground opacity-[var(--hint-opacity)]"
+              : "border-b-2 border-muted text-transparent"
             : typedCharacterMatches
-              ? "text-[var(--text-strong)]"
-              : "text-[#bd665f]";
+              ? "text-foreground"
+              : "text-destructive";
 
         return (
           <span className="inline-flex items-baseline" key={`${character}-${characterIndex}`}>
@@ -93,7 +93,7 @@ export function Word({
       })}
       {extraCharacters.map((character, characterIndex) => (
         <span
-          className="text-[#bd665f] opacity-85"
+          className="text-destructive opacity-85"
           key={`extra-${character}-${characterIndex}`}
         >
           {character}
