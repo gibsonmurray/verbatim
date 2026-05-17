@@ -1,0 +1,72 @@
+import type { Settings } from "./settings";
+import { endsWithSpace, typedWordsFrom, wordsMatch } from "./text";
+
+export type MemorizeStats = {
+  accuracy: number;
+  complete: number;
+  errors: number;
+  hints: number;
+  isDone: boolean;
+};
+
+export function getStats(
+  sourceWords: string[],
+  typedText: string,
+  revealThrough: number,
+  revealRest: boolean,
+  wordHintIndexes: number[],
+  settings: Settings,
+): MemorizeStats {
+  const typedWords = typedWordsFrom(typedText);
+  const allSourceWordsTyped = typedWords.length >= sourceWords.length;
+  const finishedWords =
+    endsWithSpace(typedText) || allSourceWordsTyped
+      ? typedWords
+      : typedWords.slice(0, -1);
+  const checkedWords = finishedWords.slice(0, sourceWords.length);
+  const errors = checkedWords.filter(
+    (word, index) => !wordsMatch(word, sourceWords[index], settings),
+  ).length;
+  const correct = checkedWords.length - errors;
+  const accuracy = checkedWords.length
+    ? Math.round((correct / checkedWords.length) * 100)
+    : 100;
+  const complete = sourceWords.length
+    ? Math.round((checkedWords.length / sourceWords.length) * 100)
+    : 0;
+  const visibleHintIndexes = new Set<number>();
+  const lastRevealThroughIndex = Math.min(revealThrough, sourceWords.length - 1);
+
+  for (let index = 0; index <= lastRevealThroughIndex; index += 1) {
+    visibleHintIndexes.add(index);
+  }
+
+  if (revealRest) {
+    for (
+      let index = Math.max(0, revealThrough + 1);
+      index < sourceWords.length;
+      index += 1
+    ) {
+      visibleHintIndexes.add(index);
+    }
+  }
+
+  wordHintIndexes.forEach((index) => {
+    if (index >= 0 && index < sourceWords.length) {
+      visibleHintIndexes.add(index);
+    }
+  });
+
+  return {
+    accuracy,
+    complete,
+    errors,
+    hints: visibleHintIndexes.size,
+    isDone:
+      typedWords.length === sourceWords.length &&
+      sourceWords.length > 0 &&
+      sourceWords.every((word, index) =>
+        wordsMatch(typedWords[index] ?? "", word, settings),
+      ),
+  };
+}
