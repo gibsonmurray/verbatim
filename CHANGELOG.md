@@ -1,3 +1,9 @@
+## [1.3.1](https://github.com/gibsonmurray/verbatim/compare/v1.3.0...v1.3.1) (2026-05-19)
+
+### Bug Fixes
+
+* add Vercel secrets validation and update deployment script; enhance .gitignore ([562bd27](https://github.com/gibsonmurray/verbatim/commit/562bd27589f5aa00c4df7e45f37602e11f729bc6))
+
 ## [1.3.0](https://github.com/gibsonmurray/verbatim/compare/v1.2.0...v1.3.0) (2026-05-19)
 
 ### Features
