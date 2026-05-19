@@ -1,0 +1,17 @@
+{
+  "name": "verbatim",
+  "short_name": "verbatim",
+  "description": "A focused memorization app for practicing passages from memory with hints, saved texts, and flow typing assistance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "/verbatim-logo.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

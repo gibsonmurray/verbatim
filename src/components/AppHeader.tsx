@@ -5,9 +5,12 @@ export function AppHeader() {
         className="inline-flex items-center gap-2.5 font-medium text-foreground"
         aria-label="verbatim home"
       >
-        <span className="grid size-8 place-items-center rounded-4xl bg-primary font-mono text-sm font-bold text-primary-foreground shadow-sm">
-          v
-        </span>
+        <img
+          src="/verbatim-logo.svg"
+          alt=""
+          className="size-8 rounded-4xl shadow-sm"
+          aria-hidden="true"
+        />
         <span>verbatim</span>
       </div>
     </header>
