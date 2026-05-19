@@ -81,6 +81,9 @@ jobs:
           if [ -z "$VERCEL_TOKEN" ]; then
             echo "::error::Missing GitHub Actions secret: VERCEL_TOKEN"
             missing=1
+          elif [[ "$VERCEL_TOKEN" == *-* || "$VERCEL_TOKEN" == *.* ]]; then
+            echo "::error::Invalid GitHub Actions secret: VERCEL_TOKEN must be a Vercel API token, not an ID, URL, or token from another service"
+            missing=1
           fi
 
           if [ -z "$VERCEL_ORG_ID" ]; then
