@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/gibsonmurray/verbatim/compare/v1.2.0...v1.3.0) (2026-05-19)
+
+### Features
+
+* enhance HTML metadata, add favicon, web manifest, and logo for improved SEO and PWA support ([6166012](https://github.com/gibsonmurray/verbatim/commit/6166012424e8347f20e7bab4b967cd08c88dd974))
+
 ## [1.2.0](https://github.com/gibsonmurray/verbatim/compare/v1.1.0...v1.2.0) (2026-05-19)
 
 ### Features
