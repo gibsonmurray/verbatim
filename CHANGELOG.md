@@ -1,3 +1,9 @@
+## [1.3.2](https://github.com/gibsonmurray/verbatim/compare/v1.3.1...v1.3.2) (2026-05-19)
+
+### Bug Fixes
+
+* enhance Vercel secrets validation to ensure correct API token format ([b740a5e](https://github.com/gibsonmurray/verbatim/commit/b740a5e5007d43850b1184c19d0c1f273149d311))
+
 ## [1.3.1](https://github.com/gibsonmurray/verbatim/compare/v1.3.0...v1.3.1) (2026-05-19)
 
 ### Bug Fixes
