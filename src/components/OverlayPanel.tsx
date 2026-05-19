@@ -26,10 +26,10 @@ export function OverlayPanel({
       }}
     >
       <DialogContent
-        className="max-h-[calc(100vh-24px)] w-[calc(100vw-24px)] max-w-[460px] overflow-auto bg-popover p-4 text-popover-foreground sm:max-w-[460px] min-[760px]:max-h-[calc(100vh-40px)]"
+        className="max-h-[calc(100vh-24px)] w-[calc(100vw-24px)] max-w-[500px] overflow-auto sm:max-w-[500px] min-[760px]:max-h-[calc(100vh-40px)]"
       >
         <DialogHeader>
-          <DialogTitle className="font-mono text-xs text-muted-foreground">
+          <DialogTitle>
             {title}
           </DialogTitle>
           <DialogDescription className="sr-only">

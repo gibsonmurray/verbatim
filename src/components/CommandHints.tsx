@@ -1,10 +1,10 @@
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { cx, meterClass } from "../lib/classNames";
+import { cn, meterClass } from "../lib/classNames";
 
 export function CommandHints() {
   return (
     <div
-      className={cx(
+      className={cn(
         meterClass,
         "mt-14 flex flex-wrap items-center justify-start gap-x-6 gap-y-3.5",
       )}

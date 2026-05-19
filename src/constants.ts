@@ -1,2 +1,2 @@
 export const sampleText =
-  "The mind is not a vessel to be filled, but a fire to be kindled.";
+  "For God so loved the world that He gave His only begotten Son, that whoever believes in Him should not perish but have everlasting life.";

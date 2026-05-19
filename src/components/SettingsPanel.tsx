@@ -19,24 +19,18 @@ import type { PlaceholderStyle, Settings } from "../lib/settings";
 import { SettingToggle } from "./SettingToggle";
 
 type SettingsPanelProps = {
-  onLoad: () => void;
   onResetDefaults: () => void;
-  onSave: () => void;
   onUpdateSetting: <Key extends keyof Settings>(
     key: Key,
     value: Settings[Key],
   ) => void;
   settings: Settings;
-  status: string;
 };
 
 export function SettingsPanel({
-  onLoad,
   onResetDefaults,
-  onSave,
   onUpdateSetting,
   settings,
-  status,
 }: SettingsPanelProps) {
   const placeholderItems: Array<{ label: string; value: PlaceholderStyle }> = [
     { label: "bars", value: "bars" },
@@ -47,13 +41,13 @@ export function SettingsPanel({
     Array.isArray(value) ? Number(value[0] ?? fallback) : Number(value);
 
   return (
-    <div className="grid gap-4.5" aria-label="settings">
+    <div className="grid gap-5" aria-label="settings">
       <div className="flex items-center justify-between gap-3 font-mono text-xs text-muted-foreground">
         <span>local</span>
-        <Badge variant="secondary">{status}</Badge>
+        <Badge variant="secondary">saved automatically</Badge>
       </div>
 
-      <FieldGroup aria-label="checking options" className="gap-0">
+      <FieldGroup aria-label="checking options" className="gap-2">
         <SettingToggle
           checked={settings.caseSensitive}
           description="match uppercase and lowercase exactly"
@@ -81,6 +75,20 @@ export function SettingsPanel({
           id="auto-reveal-current-word"
           label="current word hint"
           onChange={(checked) => onUpdateSetting("autoRevealCurrentWord", checked)}
+        />
+        <SettingToggle
+          checked={settings.autoFillFormatting}
+          description="supply source casing, punctuation, and spaces while you type letters"
+          id="auto-fill-formatting"
+          label="flow typing assist"
+          onChange={(checked) => onUpdateSetting("autoFillFormatting", checked)}
+        />
+        <SettingToggle
+          checked={settings.persistTabReveals}
+          description="keep Tab reveals visible while typing resumes"
+          id="persist-tab-reveals"
+          label="keep tab hints"
+          onChange={(checked) => onUpdateSetting("persistTabReveals", checked)}
         />
       </FieldGroup>
 
@@ -135,34 +143,9 @@ export function SettingsPanel({
           />
         </Field>
 
-        <Field>
-          <div className="flex items-center justify-between gap-3">
-            <FieldLabel htmlFor="hint-strength-slider">hint strength</FieldLabel>
-            <FieldDescription>{settings.hintStrength}%</FieldDescription>
-          </div>
-          <Slider
-            id="hint-strength-slider"
-            max={85}
-            min={25}
-            step={1}
-            value={[settings.hintStrength]}
-            onValueChange={(value) =>
-              onUpdateSetting(
-                "hintStrength",
-                firstSliderValue(value, settings.hintStrength),
-              )
-            }
-          />
-        </Field>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <Button variant="secondary" type="button" onClick={onSave}>
-          save
-        </Button>
-        <Button variant="secondary" type="button" onClick={onLoad}>
-          load
-        </Button>
+      <div>
         <Button variant="secondary" type="button" onClick={onResetDefaults}>
           defaults
         </Button>

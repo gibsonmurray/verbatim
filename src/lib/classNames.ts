@@ -1,5 +1,6 @@
-export const cx = (...classes: Array<string | false | null | undefined>) =>
-  classes.filter(Boolean).join(" ");
+import { cn } from "./utils";
+
+export { cn };
 
 export const meterClass =
   "font-mono text-xs text-muted-foreground [letter-spacing:0]";

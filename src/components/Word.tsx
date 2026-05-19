@@ -1,4 +1,4 @@
-import { cx } from "../lib/classNames";
+import { cn } from "../lib/classNames";
 import type { Settings } from "../lib/settings";
 import { normalizeForComparison, wordsMatch } from "../lib/text";
 import { PlaceholderWord } from "./PlaceholderWord";
@@ -47,7 +47,7 @@ export function Word({
     const isCorrect = wordsMatch(typed, expected, settings);
     return (
       <span
-        className={cx(
+        className={cn(
           "inline-flex min-h-[1.45em] items-baseline whitespace-pre",
           isCorrect
             ? "text-foreground"

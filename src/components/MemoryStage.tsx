@@ -1,5 +1,5 @@
 import { RefObject, KeyboardEvent } from "react";
-import { cx, meterClass } from "../lib/classNames";
+import { cn, meterClass } from "../lib/classNames";
 import type { Settings } from "../lib/settings";
 import type { MemorizeStats } from "../lib/stats";
 import { Word } from "./Word";
@@ -40,12 +40,12 @@ export function MemoryStage({
 }: MemoryStageProps) {
   return (
     <section
-      className="relative min-h-[430px] pt-5 outline-none min-[900px]:min-h-[530px] min-[900px]:pt-14"
+      className="relative min-h-[430px] rounded-4xl bg-card p-4 text-card-foreground shadow-sm ring-1 ring-border/60 outline-none min-[900px]:min-h-[530px] min-[900px]:p-8"
       onClick={() => inputRef.current?.focus()}
       aria-label="typing area"
     >
       <div
-        className={cx(
+        className={cn(
           meterClass,
           "mb-6 flex items-center justify-between gap-3 min-[900px]:mb-9",
         )}
@@ -70,10 +70,14 @@ export function MemoryStage({
             : index === currentIndex
               ? currentTypedWord
               : "";
+          const hasActiveTabHints = wordHintIndexes.some(
+            (hintIndex) => hintIndex >= currentIndex,
+          );
           const isRevealed =
             index <= revealThrough ||
             (settings.autoRevealCurrentWord && index === currentIndex) ||
-            (index > currentIndex && wordHintIndexes.includes(index)) ||
+            (index === currentIndex && hasActiveTabHints) ||
+            (index >= currentIndex && wordHintIndexes.includes(index)) ||
             (revealRest && index >= currentIndex);
 
           return (
@@ -107,7 +111,7 @@ export function MemoryStage({
 
       {stats.isDone ? (
         <div
-          className="absolute right-0 bottom-1.5 rounded-md bg-primary px-3 py-2 font-mono text-xs font-extrabold text-primary-foreground"
+          className="absolute right-4 bottom-4 rounded-4xl bg-primary px-3 py-2 font-mono text-xs font-bold text-primary-foreground min-[900px]:right-8 min-[900px]:bottom-8"
           role="status"
         >
           locked in

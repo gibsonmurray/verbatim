@@ -1,11 +1,12 @@
 import {
-  FormEvent,
   KeyboardEvent,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
 } from "react";
+import confetti from "canvas-confetti";
 import { AppHeader } from "./components/AppHeader";
 import { CommandBar } from "./components/CommandBar";
 import { MemoryStage } from "./components/MemoryStage";
@@ -14,21 +15,41 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { SourcePanel } from "./components/SourcePanel";
 import { sampleText } from "./constants";
 import {
-  clearLocalSettings,
+  createSavedSourceEntry,
   defaultSettings,
   loadLocalSettings,
+  loadLocalSavedSourceEntries,
+  loadLocalSourceText,
   saveLocalSettings,
+  saveLocalSavedSourceEntries,
+  saveLocalSourceText,
   type Settings,
 } from "./lib/settings";
 import { getStats } from "./lib/stats";
-import { endsWithSpace, normalizeText, toWords, typedWordsFrom } from "./lib/text";
+import {
+  endsWithSpace,
+  formatTypedTextFromSource,
+  normalizeText,
+  removeLastTypedCharacter,
+  toWords,
+  typedWordsFrom,
+} from "./lib/text";
 
 type ActiveOverlay = "source" | "settings" | null;
 
 export default function App() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [sourceDraft, setSourceDraft] = useState(sampleText);
-  const [sourceText, setSourceText] = useState(sampleText);
+  const wasDoneRef = useRef(false);
+  const [sourceDraft, setSourceDraft] = useState(
+    () => loadLocalSourceText() ?? sampleText,
+  );
+  const [sourceText, setSourceText] = useState(
+    () => loadLocalSourceText() ?? sampleText,
+  );
+  const [savedSourceEntries, setSavedSourceEntries] = useState(
+    loadLocalSavedSourceEntries,
+  );
+  const [selectedSavedSourceId, setSelectedSavedSourceId] = useState("");
   const [typedText, setTypedText] = useState("");
   const [revealThrough, setRevealThrough] = useState(-1);
   const [revealRest, setRevealRest] = useState(false);
@@ -36,9 +57,6 @@ export default function App() {
   const [activeOverlay, setActiveOverlay] = useState<ActiveOverlay>(null);
   const [settings, setSettings] = useState<Settings>(
     () => loadLocalSettings() ?? defaultSettings,
-  );
-  const [settingsStatus, setSettingsStatus] = useState(
-    () => (loadLocalSettings() ? "loaded local" : "defaults active"),
   );
 
   const sourceWords = useMemo(() => toWords(sourceText), [sourceText]);
@@ -63,61 +81,157 @@ export default function App() {
     [revealRest, revealThrough, settings, sourceWords, typedText, wordHintIndexes],
   );
 
-  const resetAttempt = () => {
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (selectedSavedSourceId) return;
+
+    const matchingEntry = savedSourceEntries.find(
+      (entry) => entry.text === sourceText,
+    );
+
+    if (matchingEntry) {
+      setSelectedSavedSourceId(matchingEntry.id);
+    }
+  }, [savedSourceEntries, selectedSavedSourceId, sourceText]);
+
+  useEffect(() => {
+    if (stats.isDone && !wasDoneRef.current) {
+      confetti({
+        angle: 60,
+        disableForReducedMotion: true,
+        origin: { x: 0, y: 0.75 },
+        particleCount: 90,
+        spread: 55,
+        startVelocity: 48,
+      });
+      confetti({
+        angle: 120,
+        disableForReducedMotion: true,
+        origin: { x: 1, y: 0.75 },
+        particleCount: 90,
+        spread: 55,
+        startVelocity: 48,
+      });
+    }
+
+    wasDoneRef.current = stats.isDone;
+  }, [stats.isDone]);
+
+  const resetAttempt = (options: { focus?: boolean } = {}) => {
     setTypedText("");
     setRevealThrough(-1);
     setRevealRest(false);
     setWordHintIndexes([]);
-    window.requestAnimationFrame(() => inputRef.current?.focus());
+
+    if (options.focus ?? true) {
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+    }
   };
 
-  const applySource = (event: FormEvent) => {
-    event.preventDefault();
+  const saveSavedSourceEntries = (
+    getNextEntries: (entries: typeof savedSourceEntries) => typeof savedSourceEntries,
+  ) => {
+    setSavedSourceEntries((currentEntries) => {
+      const nextEntries = getNextEntries(currentEntries).sort(
+        (first, second) => second.updatedAt - first.updatedAt,
+      );
+
+      saveLocalSavedSourceEntries(nextEntries);
+      return nextEntries;
+    });
+  };
+
+  const saveSourceEntry = () => {
     const normalized = normalizeText(sourceDraft);
 
     if (!normalized) return;
 
-    setSourceText(normalized);
+    const existingEntry = savedSourceEntries.find(
+      (entry) => entry.text === normalized,
+    );
+
+    if (existingEntry) {
+      setSelectedSavedSourceId(existingEntry.id);
+      setSourceDraft(existingEntry.text);
+      setSourceText(existingEntry.text);
+      saveLocalSourceText(existingEntry.text);
+      resetAttempt({ focus: false });
+      return;
+    }
+
+    const nextEntry = createSavedSourceEntry(normalized);
+
+    saveSavedSourceEntries((entries) => [nextEntry, ...entries]);
+    setSelectedSavedSourceId(nextEntry.id);
     setSourceDraft(normalized);
-    resetAttempt();
-    setActiveOverlay(null);
+    setSourceText(normalized);
+    saveLocalSourceText(normalized);
+    resetAttempt({ focus: false });
+  };
+
+  const selectSavedSource = (id: string) => {
+    const entry = savedSourceEntries.find((savedEntry) => savedEntry.id === id);
+
+    if (!entry) return;
+
+    setSelectedSavedSourceId(entry.id);
+    setSourceDraft(entry.text);
+    setSourceText(entry.text);
+    saveLocalSourceText(entry.text);
+    resetAttempt({ focus: false });
+  };
+
+  const deleteSavedSource = (id: string) => {
+    saveSavedSourceEntries((entries) =>
+      entries.filter((entry) => entry.id !== id),
+    );
+
+    if (selectedSavedSourceId === id) {
+      setSelectedSavedSourceId("");
+    }
+  };
+
+  const updateSourceDraft = (value: string) => {
+    setSourceDraft(value);
+    setSourceText(value);
+    saveLocalSourceText(value);
+    setSelectedSavedSourceId("");
+    resetAttempt({ focus: false });
   };
 
   const updateSetting = <Key extends keyof Settings>(
     key: Key,
     value: Settings[Key],
   ) => {
-    setSettings((currentSettings) => ({
-      ...currentSettings,
-      [key]: value,
-    }));
-    setSettingsStatus("unsaved changes");
-  };
+    setSettings((currentSettings) => {
+      const nextSettings = {
+        ...currentSettings,
+        [key]: value,
+      };
 
-  const saveSettings = () => {
-    saveLocalSettings(settings);
-    setSettingsStatus("saved locally");
-  };
-
-  const loadSettings = () => {
-    const savedSettings = loadLocalSettings();
-
-    if (!savedSettings) {
-      setSettingsStatus("nothing saved");
-      return;
-    }
-
-    setSettings(savedSettings);
-    setSettingsStatus("loaded local");
+      saveLocalSettings(nextSettings);
+      return nextSettings;
+    });
   };
 
   const restoreDefaults = () => {
-    clearLocalSettings();
     setSettings(defaultSettings);
-    setSettingsStatus("defaults active");
+    saveLocalSettings(defaultSettings);
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (settings.autoFillFormatting && event.key === "Backspace") {
+      event.preventDefault();
+      setTypedText((currentText) =>
+        removeLastTypedCharacter(currentText, sourceText),
+      );
+      setWordHintIndexes([]);
+      return;
+    }
+
     if (event.key === "Tab") {
       event.preventDefault();
 
@@ -126,12 +240,18 @@ export default function App() {
         setRevealThrough((previous) => Math.max(previous, currentIndex));
       } else {
         setWordHintIndexes((previous) => {
-          const highestHintedFutureIndex = previous.reduce(
+          if (!previous.includes(currentIndex)) {
+            return settings.persistTabReveals
+              ? [...previous, currentIndex]
+              : [currentIndex];
+          }
+
+          const highestHintedIndex = previous.reduce(
             (highest, index) =>
-              index > currentIndex ? Math.max(highest, index) : highest,
-            currentIndex,
+              index >= currentIndex ? Math.max(highest, index) : highest,
+            currentIndex - 1,
           );
-          const nextHintIndex = highestHintedFutureIndex + 1;
+          const nextHintIndex = highestHintedIndex + 1;
 
           if (nextHintIndex >= sourceWords.length) return previous;
 
@@ -154,13 +274,25 @@ export default function App() {
     );
   };
 
+  const updateTypedText = (value: string) => {
+    const nextTypedText = settings.autoFillFormatting
+      ? formatTypedTextFromSource(value, sourceText)
+      : value;
+
+    setTypedText(nextTypedText);
+
+    if (!settings.persistTabReveals && nextTypedText !== typedText) {
+      setWordHintIndexes([]);
+    }
+  };
+
   return (
     <main
-      className="mx-auto flex min-h-screen w-[min(980px,calc(100vw-32px))] flex-col gap-7 py-5 text-foreground min-[900px]:gap-10 min-[900px]:py-7"
+      className="mx-auto flex min-h-screen w-[min(1040px,calc(100vw-24px))] flex-col gap-4 py-4 text-foreground min-[900px]:gap-5 min-[900px]:py-6"
       style={
         {
           "--word-size": `${settings.wordSize}px`,
-          "--hint-opacity": `${settings.hintStrength / 100}`,
+          "--hint-opacity": "0.56",
         } as CSSProperties
       }
     >
@@ -180,7 +312,7 @@ export default function App() {
           hasTrailingSpace={hasTrailingSpace}
           inputRef={inputRef}
           onKeyDown={handleKeyDown}
-          onTypedTextChange={setTypedText}
+          onTypedTextChange={updateTypedText}
           revealRest={revealRest}
           revealThrough={revealThrough}
           settings={settings}
@@ -196,9 +328,13 @@ export default function App() {
         <OverlayPanel title="source" onClose={() => setActiveOverlay(null)}>
           <SourcePanel
             charCount={sourceDraft.length}
-            onApplySource={applySource}
+            onDeleteSavedSource={deleteSavedSource}
             onResetAttempt={resetAttempt}
-            onSourceDraftChange={setSourceDraft}
+            onSaveSourceEntry={saveSourceEntry}
+            onSelectSavedSource={selectSavedSource}
+            onSourceDraftChange={updateSourceDraft}
+            savedSourceEntries={savedSourceEntries}
+            selectedSavedSourceId={selectedSavedSourceId}
             sourceDraft={sourceDraft}
             wordCount={sourceDraftWords.length}
           />
@@ -208,12 +344,9 @@ export default function App() {
       {activeOverlay === "settings" ? (
         <OverlayPanel title="settings" onClose={() => setActiveOverlay(null)}>
           <SettingsPanel
-            onLoad={loadSettings}
             onResetDefaults={restoreDefaults}
-            onSave={saveSettings}
             onUpdateSetting={updateSetting}
             settings={settings}
-            status={settingsStatus}
           />
         </OverlayPanel>
       ) : null}

@@ -26,7 +26,7 @@ export function SettingToggle({
     <FieldLabel htmlFor={id} className="w-full">
       <Field
         orientation="horizontal"
-        className="border-b border-border/70 py-2.5 first:pt-0"
+        className="rounded-3xl bg-muted/60 p-3"
       >
         <FieldContent>
           <FieldTitle className="text-foreground">{label}</FieldTitle>

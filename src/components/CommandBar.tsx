@@ -1,9 +1,4 @@
-import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  FileEditIcon,
-  RefreshIcon,
-  Settings02Icon,
-} from "@hugeicons/core-free-icons";
+import { FileTextIcon, RotateCcwIcon, SettingsIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MemorizeStats } from "../lib/stats";
@@ -24,7 +19,7 @@ export function CommandBar({
   stats,
 }: CommandBarProps) {
   return (
-    <div className="flex flex-col gap-3 border border-border bg-card/70 px-3 py-2.5 text-card-foreground min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between">
+    <div className="flex flex-col gap-3 rounded-4xl bg-card p-2 text-card-foreground shadow-sm ring-1 ring-border/60 min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between">
       <div className="flex flex-wrap items-center gap-1">
         <Button
           variant={activeOverlay === "source" ? "default" : "ghost"}
@@ -32,7 +27,7 @@ export function CommandBar({
           aria-pressed={activeOverlay === "source"}
           onClick={() => onToggleOverlay("source")}
         >
-          <HugeiconsIcon icon={FileEditIcon} strokeWidth={2} data-icon="inline-start" />
+          <FileTextIcon data-icon="inline-start" />
           source
         </Button>
         <Button
@@ -41,16 +36,16 @@ export function CommandBar({
           aria-pressed={activeOverlay === "settings"}
           onClick={() => onToggleOverlay("settings")}
         >
-          <HugeiconsIcon icon={Settings02Icon} strokeWidth={2} data-icon="inline-start" />
+          <SettingsIcon data-icon="inline-start" />
           settings
         </Button>
         <Button variant="ghost" size="sm" onClick={onResetAttempt}>
-          <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} data-icon="inline-start" />
+          <RotateCcwIcon data-icon="inline-start" />
           reset
         </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
+      <div className="flex flex-wrap items-center gap-2 px-1 font-mono text-xs min-[720px]:justify-end">
         <Badge variant="secondary">
           {stats.complete}% done
         </Badge>
