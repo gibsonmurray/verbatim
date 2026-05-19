@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/gibsonmurray/verbatim/compare/v1.1.0...v1.2.0) (2026-05-19)
+
+### Features
+
+* add new UI components including Badge, Button, Dialog, Field, Kbd, Label, Select, Separator, Slider, Switch, and Textarea ([9d1a663](https://github.com/gibsonmurray/verbatim/commit/9d1a663f4e5b7f3a4fa4cb10e01a81f0e64dbf4c))
+* fixes ([ce29fbf](https://github.com/gibsonmurray/verbatim/commit/ce29fbfe550ba22850ccbe5a0464773272dde65a))
+
 ## [1.1.0](https://github.com/gibsonmurray/verbatim/compare/v1.0.0...v1.1.0) (2026-05-17)
 
 ### Features
