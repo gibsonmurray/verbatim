@@ -56,6 +56,7 @@ jobs:
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -73,11 +74,34 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Validate Vercel secrets
+        run: |
+          missing=0
+
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret: VERCEL_TOKEN"
+            missing=1
+          fi
+
+          if [ -z "$VERCEL_ORG_ID" ]; then
+            echo "::error::Missing GitHub Actions secret: VERCEL_ORG_ID"
+            missing=1
+          fi
+
+          if [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::Missing GitHub Actions secret: VERCEL_PROJECT_ID"
+            missing=1
+          fi
+
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
       - name: Pull Vercel environment
-        run: ./node_modules/.bin/vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        run: ./node_modules/.bin/vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build Vercel output
-        run: ./node_modules/.bin/vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: ./node_modules/.bin/vercel build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy to Vercel
-        run: ./node_modules/.bin/vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        run: ./node_modules/.bin/vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
