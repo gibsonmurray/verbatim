@@ -6,7 +6,7 @@ export function CommandHints() {
     <div
       className={cn(
         meterClass,
-        "mt-14 flex flex-wrap items-center justify-start gap-x-6 gap-y-3.5",
+        "mx-auto mt-16 flex max-w-full flex-wrap items-center justify-center gap-x-5 gap-y-2 opacity-70",
       )}
       aria-label="keyboard shortcuts"
     >

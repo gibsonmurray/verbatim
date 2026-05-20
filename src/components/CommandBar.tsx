@@ -1,61 +1,105 @@
-import { FileTextIcon, RotateCcwIcon, SettingsIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  SparklesIcon,
+  TimerIcon,
+  TrophyIcon,
+} from "lucide-react";
+import {
+  defaultGameProfile,
+  getLevel,
+  getLevelProgress,
+  type GameProfile,
+} from "../lib/game";
+import { formatElapsedTime, type BestRun } from "../lib/records";
 import type { MemorizeStats } from "../lib/stats";
 
-type ActiveOverlay = "source" | "settings" | null;
+type StatItemProps = {
+  label: string;
+  value: string;
+};
 
 type CommandBarProps = {
-  activeOverlay: ActiveOverlay;
-  onResetAttempt: () => void;
-  onToggleOverlay: (overlay: Exclude<ActiveOverlay, null>) => void;
+  bestRun: BestRun | null;
+  elapsedMs: number;
+  gameProfile: GameProfile;
+  isNewBest: boolean;
+  isTimerRunning: boolean;
+  score: number;
   stats: MemorizeStats;
 };
 
+function StatItem({ label, value }: StatItemProps) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="font-sans text-xs font-semibold leading-none text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-xs font-semibold leading-none text-foreground">
+        {value}
+      </span>
+    </div>
+  );
+}
+
 export function CommandBar({
-  activeOverlay,
-  onResetAttempt,
-  onToggleOverlay,
+  bestRun,
+  elapsedMs,
+  gameProfile = defaultGameProfile,
+  isNewBest,
+  isTimerRunning,
+  score,
   stats,
 }: CommandBarProps) {
+  const level = getLevel(gameProfile.totalXp);
+  const levelProgress = getLevelProgress(gameProfile.totalXp);
+
   return (
-    <div className="flex flex-col gap-3 rounded-4xl bg-card p-2 text-card-foreground shadow-sm ring-1 ring-border/60 min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between">
-      <div className="flex flex-wrap items-center gap-1">
-        <Button
-          variant={activeOverlay === "source" ? "default" : "ghost"}
-          size="sm"
-          aria-pressed={activeOverlay === "source"}
-          onClick={() => onToggleOverlay("source")}
-        >
-          <FileTextIcon data-icon="inline-start" />
-          source
-        </Button>
-        <Button
-          variant={activeOverlay === "settings" ? "default" : "ghost"}
-          size="sm"
-          aria-pressed={activeOverlay === "settings"}
-          onClick={() => onToggleOverlay("settings")}
-        >
-          <SettingsIcon data-icon="inline-start" />
-          settings
-        </Button>
-        <Button variant="ghost" size="sm" onClick={onResetAttempt}>
-          <RotateCcwIcon data-icon="inline-start" />
-          reset
-        </Button>
+    <section
+      className="mx-auto flex w-fit max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-1.5 rounded-xl bg-card/70 px-3 py-2 font-mono text-card-foreground"
+      aria-label="practice status"
+    >
+      <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <TimerIcon className={isTimerRunning ? "size-3.5 text-primary" : "size-3.5"} />
+        </div>
+        <StatItem label="time" value={formatElapsedTime(elapsedMs)} />
+        <StatItem
+          label="pb"
+          value={bestRun ? formatElapsedTime(bestRun.elapsedMs) : "--"}
+        />
+        {isNewBest ? (
+          <span className="rounded-md bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
+            new pb
+          </span>
+        ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 px-1 font-mono text-xs min-[720px]:justify-end">
-        <Badge variant="secondary">
-          {stats.complete}% done
-        </Badge>
-        <Badge variant="secondary">
-          {stats.accuracy}% acc
-        </Badge>
-        <Badge variant="secondary">
-          {stats.hints} hints
-        </Badge>
+      <div className="h-4 w-px bg-border/70" />
+
+      <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <TrophyIcon className="size-3.5" />
+        </div>
+        <StatItem label="done" value={`${stats.complete}%`} />
+        <StatItem label="acc" value={`${stats.accuracy}%`} />
+        <StatItem label="hints" value={`${stats.hints}`} />
       </div>
-    </div>
+
+      <div className="h-4 w-px bg-border/70" />
+
+      <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+          <SparklesIcon className="size-3.5" />
+        </div>
+        <StatItem label="pts" value={`${score}`} />
+        <StatItem label="lvl" value={`${level}`} />
+        <StatItem label="streak" value={`${gameProfile.streak}`} />
+        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-background">
+          <div
+            className="h-full rounded-full bg-primary transition-[width]"
+            style={{ width: `${(levelProgress / 1000) * 100}%` }}
+          />
+        </div>
+      </div>
+    </section>
   );
 }
