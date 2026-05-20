@@ -1,6 +1,6 @@
 {
-  "name": "verbatim",
-  "short_name": "verbatim",
+  "name": "Verbatim",
+  "short_name": "Verbatim",
   "description": "A focused memorization app for practicing passages from memory with hints, saved texts, and flow typing assistance.",
   "start_url": "/",
   "display": "standalone",

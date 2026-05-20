@@ -11,7 +11,7 @@ export function AppHeader() {
           className="size-8 rounded-4xl shadow-sm"
           aria-hidden="true"
         />
-        <span>verbatim</span>
+        <span>Verbatim</span>
       </div>
     </header>
   );
