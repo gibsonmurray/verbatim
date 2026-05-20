@@ -160,7 +160,10 @@ export function SettingsPanel({
   return (
     <div className="grid gap-6" aria-label="settings">
       <div className="flex items-center justify-between gap-4 border-b border-border/60 pb-4">
-        <p className="text-xs text-muted-foreground">Saved automatically on this device.</p>
+        <p className="text-xs text-muted-foreground">
+          Saved automatically on this device.{" "}
+          <span className="text-muted-foreground/50">v{__APP_VERSION__}</span>
+        </p>
         <Button
           variant="ghost"
           size="sm"
