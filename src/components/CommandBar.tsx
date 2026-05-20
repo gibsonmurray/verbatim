@@ -3,6 +3,7 @@ import {
   TimerIcon,
   TrophyIcon,
 } from "lucide-react";
+import { cn } from "../lib/classNames";
 import {
   defaultGameProfile,
   getLevel,
@@ -15,6 +16,7 @@ import type { MemorizeStats } from "../lib/stats";
 type StatItemProps = {
   label: string;
   value: string;
+  minWidth?: string;
 };
 
 type CommandBarProps = {
@@ -27,13 +29,16 @@ type CommandBarProps = {
   stats: MemorizeStats;
 };
 
-function StatItem({ label, value }: StatItemProps) {
+function StatItem({ label, value, minWidth }: StatItemProps) {
   return (
     <div className="flex items-center gap-1.5">
       <span className="font-sans text-xs font-semibold leading-none text-muted-foreground">
         {label}
       </span>
-      <span className="text-xs font-semibold leading-none text-foreground">
+      <span
+        className="text-xs font-semibold leading-none text-foreground tabular-nums"
+        style={minWidth ? { minWidth } : undefined}
+      >
         {value}
       </span>
     </div>
@@ -61,16 +66,21 @@ export function CommandBar({
         <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
           <TimerIcon className={isTimerRunning ? "size-3.5 text-primary" : "size-3.5"} />
         </div>
-        <StatItem label="time" value={formatElapsedTime(elapsedMs)} />
+        <StatItem label="time" value={formatElapsedTime(elapsedMs)} minWidth="6ch" />
         <StatItem
           label="pb"
           value={bestRun ? formatElapsedTime(bestRun.elapsedMs) : "--"}
+          minWidth="6ch"
         />
-        {isNewBest ? (
-          <span className="rounded-md bg-primary/15 px-2 py-1 text-xs font-bold text-primary">
-            new pb
-          </span>
-        ) : null}
+        <span
+          className={cn(
+            "rounded-md bg-primary/15 px-2 py-1 text-xs font-bold text-primary",
+            !isNewBest && "invisible",
+          )}
+          aria-hidden={!isNewBest}
+        >
+          new pb
+        </span>
       </div>
 
       <div className="h-4 w-px bg-border/70" />
@@ -79,9 +89,9 @@ export function CommandBar({
         <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
           <TrophyIcon className="size-3.5" />
         </div>
-        <StatItem label="done" value={`${stats.complete}%`} />
-        <StatItem label="acc" value={`${stats.accuracy}%`} />
-        <StatItem label="hints" value={`${stats.hints}`} />
+        <StatItem label="done" value={`${stats.complete}%`} minWidth="4ch" />
+        <StatItem label="acc" value={`${stats.accuracy}%`} minWidth="4ch" />
+        <StatItem label="hints" value={`${stats.hints}`} minWidth="2ch" />
       </div>
 
       <div className="h-4 w-px bg-border/70" />
@@ -90,9 +100,9 @@ export function CommandBar({
         <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
           <SparklesIcon className="size-3.5" />
         </div>
-        <StatItem label="pts" value={`${score}`} />
-        <StatItem label="lvl" value={`${level}`} />
-        <StatItem label="streak" value={`${gameProfile.streak}`} />
+        <StatItem label="pts" value={`${score}`} minWidth="4ch" />
+        <StatItem label="lvl" value={`${level}`} minWidth="2ch" />
+        <StatItem label="streak" value={`${gameProfile.streak}`} minWidth="2ch" />
         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-background">
           <div
             className="h-full rounded-full bg-primary transition-[width]"

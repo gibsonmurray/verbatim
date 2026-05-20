@@ -129,24 +129,26 @@ export function MemoryStage({
 
       <CommandHints />
 
-      {stats.isDone ? (
-        <div
-          className="mx-auto mt-9 flex w-fit flex-wrap items-center justify-center gap-2 rounded-xl bg-card/70 px-3 py-2 font-mono text-xs font-bold text-primary"
-          role="status"
-        >
-          <span>locked in</span>
-          {xpGained === null ? null : <span>+{xpGained} XP</span>}
-          {earnedMedals.map((medalId) => (
-            <span
-              className="rounded-md bg-muted px-2 py-0.5 text-foreground"
-              key={medalId}
-              title={medals[medalId].description}
-            >
-              {medals[medalId].label}
-            </span>
-          ))}
-        </div>
-      ) : null}
+      <div
+        className={cn(
+          "mx-auto mt-9 flex w-fit flex-wrap items-center justify-center gap-2 rounded-xl bg-card/70 px-3 py-2 font-mono text-xs font-bold text-primary",
+          !stats.isDone && "invisible",
+        )}
+        role="status"
+        aria-hidden={!stats.isDone}
+      >
+        <span>locked in</span>
+        {xpGained === null ? null : <span>+{xpGained} XP</span>}
+        {earnedMedals.map((medalId) => (
+          <span
+            className="rounded-md bg-muted px-2 py-0.5 text-foreground"
+            key={medalId}
+            title={medals[medalId].description}
+          >
+            {medals[medalId].label}
+          </span>
+        ))}
+      </div>
     </section>
   );
 }

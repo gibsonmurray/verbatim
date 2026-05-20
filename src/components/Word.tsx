@@ -79,7 +79,7 @@ export function Word({
           typedCharacter === undefined
             ? isRevealed
               ? "text-muted-foreground opacity-[var(--hint-opacity)]"
-              : "border-b-2 border-muted text-transparent"
+              : "text-transparent [box-shadow:inset_0_-2px_0_var(--color-muted)]"
             : typedCharacterMatches
               ? "text-foreground"
               : "text-destructive";
