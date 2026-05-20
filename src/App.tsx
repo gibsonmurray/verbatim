@@ -38,6 +38,7 @@ import {
   saveCompletedRun,
   type BestRun,
 } from "./lib/records";
+import { cn } from "./lib/classNames";
 import { getStats } from "./lib/stats";
 import {
   endsWithSpace,
@@ -500,7 +501,10 @@ export default function App() {
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-[min(1720px,calc(100vw-32px))] flex-col gap-8 py-6 text-foreground min-[900px]:w-[min(1720px,calc(100vw-112px))] min-[900px]:gap-12 min-[900px]:py-9"
+      className={cn(
+        "mx-auto flex min-h-screen w-[min(1720px,calc(100vw-32px))] flex-col gap-8 py-6 text-foreground transition-[filter] duration-200 min-[900px]:w-[min(1720px,calc(100vw-112px))] min-[900px]:gap-12 min-[900px]:py-9",
+        activeOverlay !== null && "blur-sm",
+      )}
       style={
         {
           "--word-size": `${settings.wordSize}px`,
