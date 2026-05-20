@@ -11,6 +11,7 @@ type WordProps = {
   isComplete: boolean;
   isRevealed: boolean;
   settings: Settings;
+  hadError?: boolean;
 };
 
 function TextCursor() {
@@ -30,6 +31,7 @@ export function Word({
   isComplete,
   isRevealed,
   settings,
+  hadError = false,
 }: WordProps) {
   if (index > currentIndex && !isComplete && !isRevealed) {
     return <PlaceholderWord expected={expected} style={settings.placeholderStyle} />;
@@ -49,9 +51,9 @@ export function Word({
       <span
         className={cn(
           "inline-flex min-h-[1.45em] items-baseline whitespace-pre",
-          isCorrect
-            ? "text-foreground"
-            : "text-destructive underline decoration-2 underline-offset-[0.22em]",
+          isCorrect && !hadError && "text-foreground",
+          isCorrect && hadError && "text-amber-400",
+          !isCorrect && "text-destructive underline decoration-2 underline-offset-[0.22em]",
         )}
       >
         {typed}

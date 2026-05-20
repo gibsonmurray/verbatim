@@ -26,11 +26,14 @@ import {
   type Settings,
 } from "./lib/settings";
 import {
+  breakStreak,
   defaultGameProfile,
+  getStreakMultiplier,
   loadGameProfile,
   saveGameCompletion,
   type GameProfile,
   type MedalId,
+  type RunBreakdown,
 } from "./lib/game";
 import {
   getBestRunKey,
@@ -45,10 +48,12 @@ import {
   completeCurrentWordFromSource,
   formatTypedTextCasingFromSourceWords,
   formatTypedTextFromSource,
+  normalizeForComparison,
   normalizeText,
   removeLastTypedCharacter,
   toWords,
   typedWordsFrom,
+  wordsMatch,
 } from "./lib/text";
 
 type ActiveOverlay = "source" | "settings" | null;
@@ -56,6 +61,15 @@ type ActiveOverlay = "source" | "settings" | null;
 export default function App() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const wasDoneRef = useRef(false);
+  // Tracks previous currentIndex so the streak effect can detect word completion
+  const prevIndexRef = useRef(0);
+  // True while the current word has had a hint applied (Tab or Shift+Tab)
+  const currentWordHintedRef = useRef(false);
+  // Mirrors wordStreak state for synchronous reads in the completion handler
+  const wordStreakRef = useRef(0);
+  // Mirrors errorWordIndexes state for synchronous reads in effects
+  const errorWordIndexesRef = useRef(new Set<number>());
+
   const [sourceDraft, setSourceDraft] = useState(
     () => loadLocalSourceText() ?? sampleText,
   );
@@ -79,12 +93,13 @@ export default function App() {
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [bestRun, setBestRun] = useState<BestRun | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
-  const [gameProfile, setGameProfile] = useState<GameProfile>(
-    defaultGameProfile,
-  );
+  const [gameProfile, setGameProfile] = useState<GameProfile>(defaultGameProfile);
   const [earnedMedals, setEarnedMedals] = useState<MedalId[]>([]);
   const [xpGained, setXpGained] = useState<number | null>(null);
-  const [hadMistake, setHadMistake] = useState(false);
+  const [wordStreak, setWordStreak] = useState(0);
+  const [hadFullReveal, setHadFullReveal] = useState(false);
+  const [errorWordIndexes, setErrorWordIndexes] = useState<Set<number>>(new Set());
+  const [breakdown, setBreakdown] = useState<RunBreakdown | null>(null);
 
   const sourceWords = useMemo(() => toWords(sourceText), [sourceText]);
   const sourceDraftWords = useMemo(() => toWords(sourceDraft), [sourceDraft]);
@@ -113,18 +128,22 @@ export default function App() {
   const elapsedMs =
     finishedElapsedMs ?? (runStartedAt ? Math.max(0, nowMs - runStartedAt) : 0);
   const isTimerRunning = runStartedAt !== null && !stats.isDone;
+
+  // Keep refs in sync with state for synchronous reads in effects/handlers
+  wordStreakRef.current = wordStreak;
+  errorWordIndexesRef.current = errorWordIndexes;
+
+  // Derived: hadMistake is true if any word ever had an error (including corrected)
+  const hadMistake = errorWordIndexes.size > 0;
+  const streakMultiplier = getStreakMultiplier(wordStreak, hadFullReveal);
+
   const score =
     stats.isDone && xpGained !== null
       ? xpGained
-      : stats.complete === 0
-        ? 0
-        : Math.max(
-            0,
-            Math.round(stats.complete * 10 + stats.accuracy - stats.hints * 50),
-          );
+      : Math.round(sourceWords.length * stats.complete * streakMultiplier);
 
   useEffect(() => {
-    if (activeOverlay === "settings") return;
+    if (activeOverlay !== null) return;
 
     let focusFrame = 0;
 
@@ -143,7 +162,6 @@ export default function App() {
 
     const handleFocusIn = (event: FocusEvent) => {
       if (event.target === inputRef.current) return;
-
       focusTypingInput();
     };
 
@@ -166,7 +184,6 @@ export default function App() {
       if (focusFrame) {
         window.cancelAnimationFrame(focusFrame);
       }
-
       document.removeEventListener("focusin", handleFocusIn);
       window.removeEventListener("pointerup", handlePointerUp);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -184,35 +201,82 @@ export default function App() {
 
   useEffect(() => {
     if (!isTimerRunning) return;
-
-    const timerId = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 100);
-
+    const timerId = window.setInterval(() => setNowMs(Date.now()), 100);
     return () => window.clearInterval(timerId);
   }, [isTimerRunning]);
 
   useEffect(() => {
     if (selectedSavedSourceId) return;
-
     const matchingEntry = savedSourceEntries.find(
       (entry) => entry.text === sourceText,
     );
-
-    if (matchingEntry) {
-      setSelectedSavedSourceId(matchingEntry.id);
-    }
+    if (matchingEntry) setSelectedSavedSourceId(matchingEntry.id);
   }, [savedSourceEntries, selectedSavedSourceId, sourceText]);
 
+  // Real-time error tracking + word-completion streak updates
   useEffect(() => {
-    if (runStartedAt !== null && stats.errors > 0) {
-      setHadMistake(true);
+    if (!runStartedAt) {
+      prevIndexRef.current = currentIndex;
+      return;
     }
-  }, [runStartedAt, stats.errors]);
+
+    // Track errors for the word currently being typed
+    if (!hasTrailingSpace && !stats.isDone) {
+      const currentTypedWord = typedWords[currentIndex] ?? "";
+      const sourceWord = sourceWords[currentIndex] ?? "";
+      const hasError = currentTypedWord.split("").some((char, i) => {
+        const expected = sourceWord[i] ?? "";
+        return !expected || normalizeForComparison(char, settings) !== normalizeForComparison(expected, settings);
+      });
+      if (hasError && !errorWordIndexesRef.current.has(currentIndex)) {
+        setErrorWordIndexes((prev) => {
+          const next = new Set(prev);
+          next.add(currentIndex);
+          return next;
+        });
+      }
+    }
+
+    // Streak update when a word is completed (currentIndex increased)
+    const prevIndex = prevIndexRef.current;
+    if (currentIndex > prevIndex) {
+      const completedTyped = typedWords[prevIndex] ?? "";
+      const completedExpected = sourceWords[prevIndex] ?? "";
+      const isCorrect = wordsMatch(completedTyped, completedExpected, settings);
+      const wasHinted = currentWordHintedRef.current;
+      currentWordHintedRef.current = false;
+
+      if (!wasHinted && isCorrect) {
+        setWordStreak((s) => s + 1);
+      } else if (!wasHinted && !isCorrect) {
+        setWordStreak(0);
+      }
+      // wasHinted: streak already reset to 0 in the Tab handler
+    }
+
+    prevIndexRef.current = currentIndex;
+  }, [
+    typedText,
+    currentIndex,
+    runStartedAt,
+    hasTrailingSpace,
+    stats.isDone,
+    typedWords,
+    sourceWords,
+    settings,
+  ]);
 
   useEffect(() => {
     if (stats.isDone && !wasDoneRef.current) {
       const finalElapsedMs = runStartedAt ? Math.max(0, Date.now() - runStartedAt) : 0;
+
+      // Account for the last word's streak contribution manually, because
+      // currentIndex doesn't increase on the final word (it stays at length-1).
+      const wasLastHinted = currentWordHintedRef.current;
+      currentWordHintedRef.current = false;
+      const finalStreak = wasLastHinted ? 0 : wordStreakRef.current + 1;
+      const finalMultiplier = getStreakMultiplier(finalStreak, hadFullReveal);
+
       const completedRun = {
         completedAt: Date.now(),
         elapsedMs: finalElapsedMs,
@@ -222,9 +286,11 @@ export default function App() {
       const savedRun = saveCompletedRun(bestRunKey, completedRun);
       const savedGame = saveGameCompletion({
         elapsedMs: finalElapsedMs,
+        errorWords: errorWordIndexesRef.current.size,
         hadMistake,
         hints: stats.hints,
         isNewBest: savedRun.isNewBest,
+        streakMultiplier: finalMultiplier,
         wordCount: sourceWords.length,
       });
 
@@ -234,6 +300,7 @@ export default function App() {
       setGameProfile(savedGame.profile);
       setEarnedMedals(savedGame.earnedMedals);
       setXpGained(savedGame.xpGained);
+      setBreakdown(savedGame.breakdown);
       confetti({
         angle: 60,
         disableForReducedMotion: true,
@@ -255,6 +322,7 @@ export default function App() {
     wasDoneRef.current = stats.isDone;
   }, [
     bestRunKey,
+    hadFullReveal,
     hadMistake,
     runStartedAt,
     sourceWords.length,
@@ -266,17 +334,25 @@ export default function App() {
     if (runStartedAt !== null || stats.isDone) return;
 
     const startedAt = Date.now();
-
     setRunStartedAt(startedAt);
     setNowMs(startedAt);
     setFinishedElapsedMs(null);
     setIsNewBest(false);
     setEarnedMedals([]);
     setXpGained(null);
-    setHadMistake(false);
+    setWordStreak(0);
+    setHadFullReveal(false);
+    setErrorWordIndexes(new Set());
+    setBreakdown(null);
+    prevIndexRef.current = 0;
+    currentWordHintedRef.current = false;
   };
 
   const resetAttempt = (options: { focus?: boolean } = {}) => {
+    if (runStartedAt !== null && !stats.isDone) {
+      setGameProfile(breakStreak());
+    }
+
     setTypedText("");
     setRevealThrough(-1);
     setRevealRest(false);
@@ -287,7 +363,12 @@ export default function App() {
     setIsNewBest(false);
     setEarnedMedals([]);
     setXpGained(null);
-    setHadMistake(false);
+    setWordStreak(0);
+    setHadFullReveal(false);
+    setErrorWordIndexes(new Set());
+    setBreakdown(null);
+    prevIndexRef.current = 0;
+    currentWordHintedRef.current = false;
 
     if (options.focus ?? true) {
       window.requestAnimationFrame(() => inputRef.current?.focus());
@@ -301,7 +382,6 @@ export default function App() {
       const nextEntries = getNextEntries(currentEntries).sort(
         (first, second) => second.updatedAt - first.updatedAt,
       );
-
       saveLocalSavedSourceEntries(nextEntries);
       return nextEntries;
     });
@@ -309,7 +389,6 @@ export default function App() {
 
   const saveSourceEntry = () => {
     const normalized = normalizeText(sourceDraft);
-
     if (!normalized) return;
 
     const existingEntry = savedSourceEntries.find(
@@ -326,7 +405,6 @@ export default function App() {
     }
 
     const nextEntry = createSavedSourceEntry(normalized);
-
     saveSavedSourceEntries((entries) => [nextEntry, ...entries]);
     setSelectedSavedSourceId(nextEntry.id);
     setSourceDraft(normalized);
@@ -337,7 +415,6 @@ export default function App() {
 
   const selectSavedSource = (id: string) => {
     const entry = savedSourceEntries.find((savedEntry) => savedEntry.id === id);
-
     if (!entry) return;
 
     setSelectedSavedSourceId(entry.id);
@@ -351,7 +428,6 @@ export default function App() {
     saveSavedSourceEntries((entries) =>
       entries.filter((entry) => entry.id !== id),
     );
-
     if (selectedSavedSourceId === id) {
       setSelectedSavedSourceId("");
     }
@@ -359,15 +435,10 @@ export default function App() {
 
   const renameSavedSource = (id: string, title: string) => {
     const normalizedTitle = title.trim().replace(/\s+/g, " ");
-
     saveSavedSourceEntries((entries) =>
       entries.map((entry) =>
         entry.id === id
-          ? {
-              ...entry,
-              title: normalizedTitle || entry.title,
-              updatedAt: Date.now(),
-            }
+          ? { ...entry, title: normalizedTitle || entry.title, updatedAt: Date.now() }
           : entry,
       ),
     );
@@ -386,11 +457,7 @@ export default function App() {
     value: Settings[Key],
   ) => {
     setSettings((currentSettings) => {
-      const nextSettings = {
-        ...currentSettings,
-        [key]: value,
-      };
-
+      const nextSettings = { ...currentSettings, [key]: value };
       saveLocalSettings(nextSettings);
       return nextSettings;
     });
@@ -427,14 +494,11 @@ export default function App() {
       );
 
       setTypedText(nextTypedText);
-      if (nextTypedText !== typedText) {
-        startRun();
-      }
+      if (nextTypedText !== typedText) startRun();
 
       if (!settings.persistTabReveals && nextTypedText !== typedText) {
         setWordHintIndexes([]);
       }
-
       return;
     }
 
@@ -442,9 +506,14 @@ export default function App() {
       event.preventDefault();
 
       if (event.shiftKey) {
+        // Full passage reveal: drops multiplier to 0.5× and takes longer to recover
         setRevealRest(true);
         setRevealThrough((previous) => Math.max(previous, currentIndex));
+        setWordStreak(0);
+        setHadFullReveal(true);
+        currentWordHintedRef.current = true;
       } else {
+        // Single-word hint: resets streak to 1×
         setWordHintIndexes((previous) => {
           if (!previous.includes(currentIndex)) {
             return settings.persistTabReveals
@@ -465,6 +534,8 @@ export default function App() {
             ? previous
             : [...previous, nextHintIndex];
         });
+        setWordStreak(0);
+        currentWordHintedRef.current = true;
       }
     }
 
@@ -487,12 +558,10 @@ export default function App() {
         })
       : settings.autoCapitalize
         ? formatTypedTextCasingFromSourceWords(value, sourceWords)
-      : value;
+        : value;
 
     setTypedText(nextTypedText);
-    if (nextTypedText && nextTypedText !== typedText) {
-      startRun();
-    }
+    if (nextTypedText && nextTypedText !== typedText) startRun();
 
     if (!settings.persistTabReveals && nextTypedText !== typedText) {
       setWordHintIndexes([]);
@@ -526,12 +595,15 @@ export default function App() {
         isTimerRunning={isTimerRunning}
         score={score}
         stats={stats}
+        streakMultiplier={streakMultiplier}
       />
 
       <section className="grid items-start" aria-label="memorization workspace">
         <MemoryStage
+          breakdown={breakdown}
           currentIndex={currentIndex}
           earnedMedals={earnedMedals}
+          errorWordIndexes={errorWordIndexes}
           hasTrailingSpace={hasTrailingSpace}
           inputRef={inputRef}
           onKeyDown={handleKeyDown}

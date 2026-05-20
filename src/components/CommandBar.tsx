@@ -8,6 +8,7 @@ import {
   defaultGameProfile,
   getLevel,
   getLevelProgress,
+  XP_PER_LEVEL,
   type GameProfile,
 } from "../lib/game";
 import { formatElapsedTime, type BestRun } from "../lib/records";
@@ -27,6 +28,7 @@ type CommandBarProps = {
   isTimerRunning: boolean;
   score: number;
   stats: MemorizeStats;
+  streakMultiplier: number;
 };
 
 function StatItem({ label, value, minWidth }: StatItemProps) {
@@ -53,6 +55,7 @@ export function CommandBar({
   isTimerRunning,
   score,
   stats,
+  streakMultiplier,
 }: CommandBarProps) {
   const level = getLevel(gameProfile.totalXp);
   const levelProgress = getLevelProgress(gameProfile.totalXp);
@@ -100,13 +103,18 @@ export function CommandBar({
         <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
           <SparklesIcon className="size-3.5" />
         </div>
-        <StatItem label="pts" value={`${score}`} minWidth="4ch" />
+        <StatItem label="pts" value={`${score.toLocaleString()}`} minWidth="4ch" />
         <StatItem label="lvl" value={`${level}`} minWidth="2ch" />
         <StatItem label="streak" value={`${gameProfile.streak}`} minWidth="2ch" />
+        <StatItem
+          label="×"
+          value={String(streakMultiplier)}
+          minWidth="3ch"
+        />
         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-background">
           <div
             className="h-full rounded-full bg-primary transition-[width]"
-            style={{ width: `${(levelProgress / 1000) * 100}%` }}
+            style={{ width: `${(levelProgress / XP_PER_LEVEL) * 100}%` }}
           />
         </div>
       </div>

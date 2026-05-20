@@ -23,10 +23,25 @@ export type GameProfile = {
 
 type RunSummary = {
   elapsedMs: number;
+  errorWords: number;
   hadMistake: boolean;
   hints: number;
   isNewBest: boolean;
+  streakMultiplier: number;
   wordCount: number;
+};
+
+export type RunBreakdown = {
+  base: number;
+  streakMultiplier: number;
+  streakBonus: number;
+  speedBonus: number;
+  cleanBonus: number;
+  hintBonus: number;
+  bestBonus: number;
+  hintPenalty: number;
+  errorPenalty: number;
+  total: number;
 };
 
 export const medals: Record<MedalId, Medal> = {
@@ -113,30 +128,63 @@ const saveGameProfile = (profile: GameProfile) => {
   }
 };
 
-export const getLevel = (totalXp: number) => Math.floor(totalXp / 1000) + 1;
+export const XP_PER_LEVEL = 10000;
 
-export const getLevelProgress = (totalXp: number) => totalXp % 1000;
+export const getLevel = (totalXp: number) => Math.floor(totalXp / XP_PER_LEVEL) + 1;
+
+export const getLevelProgress = (totalXp: number) => totalXp % XP_PER_LEVEL;
+
+// Normal mode: streak 0–2 → 1×, 3–5 → 1.25×, 6–9 → 1.5×, 10–14 → 2×, 15+ → 2.5×
+// Penalty mode (full reveal used): needs 5 clean words just to reach 1×, max 2×
+export const getStreakMultiplier = (streak: number, penaltyMode: boolean): number => {
+  if (penaltyMode) {
+    if (streak < 5) return 0.5;
+    if (streak < 8) return 1.0;
+    if (streak < 12) return 1.25;
+    if (streak < 16) return 1.5;
+    return 2.0;
+  }
+  if (streak < 3) return 1.0;
+  if (streak < 6) return 1.25;
+  if (streak < 10) return 1.5;
+  if (streak < 15) return 2.0;
+  return 2.5;
+};
 
 const getSpeedBonus = ({ elapsedMs, wordCount }: RunSummary) => {
   if (!wordCount) return 0;
-
   const wordsPerMinute = wordCount / Math.max(elapsedMs / 60000, 0.1);
-
   return Math.min(500, Math.round(wordsPerMinute * 3));
 };
 
-export const getRunScore = (run: RunSummary) => {
+export const getRunBreakdown = (run: RunSummary): RunBreakdown => {
   const base = run.wordCount * 100;
+  const streakBonus = Math.round(base * (run.streakMultiplier - 1));
+  const speedBonus = getSpeedBonus(run);
   const cleanBonus = run.hadMistake ? 0 : 250;
   const hintBonus = run.hints === 0 ? 250 : 0;
   const bestBonus = run.isNewBest ? 500 : 0;
   const hintPenalty = run.hints * 50;
-
-  return Math.max(
+  const errorPenalty = run.errorWords * 50;
+  const total = Math.max(
     0,
-    base + cleanBonus + hintBonus + bestBonus + getSpeedBonus(run) - hintPenalty,
+    base + streakBonus + speedBonus + cleanBonus + hintBonus + bestBonus - hintPenalty - errorPenalty,
   );
+  return {
+    base,
+    streakMultiplier: run.streakMultiplier,
+    streakBonus,
+    speedBonus,
+    cleanBonus,
+    hintBonus,
+    bestBonus,
+    hintPenalty,
+    errorPenalty,
+    total,
+  };
 };
+
+export const getRunScore = (run: RunSummary) => getRunBreakdown(run).total;
 
 const getUnlockedMedalsForRun = (
   run: RunSummary,
@@ -149,9 +197,17 @@ const getUnlockedMedalsForRun = (
   ...(completedRuns >= 5 ? (["five-locks"] as const) : []),
 ];
 
+export const breakStreak = () => {
+  const profile = loadGameProfile();
+  const updated = { ...profile, streak: 0 };
+  saveGameProfile(updated);
+  return updated;
+};
+
 export const saveGameCompletion = (run: RunSummary) => {
   const currentProfile = loadGameProfile();
-  const xpGained = getRunScore(run);
+  const breakdown = getRunBreakdown(run);
+  const xpGained = breakdown.total;
   const completedRuns = currentProfile.completedRuns + 1;
   const streak = currentProfile.streak + 1;
   const nextMedals = getUnlockedMedalsForRun(run, completedRuns);
@@ -169,6 +225,7 @@ export const saveGameCompletion = (run: RunSummary) => {
   saveGameProfile(profile);
 
   return {
+    breakdown,
     earnedMedals: nextMedals.filter(
       (medal) => !currentProfile.unlockedMedals.includes(medal),
     ),

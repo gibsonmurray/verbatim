@@ -1,6 +1,6 @@
 import { type RefObject, type KeyboardEvent } from "react";
 import { cn, meterClass } from "../lib/classNames";
-import { medals, type MedalId } from "../lib/game";
+import { medals, type MedalId, type RunBreakdown } from "../lib/game";
 import type { Settings } from "../lib/settings";
 import type { MemorizeStats } from "../lib/stats";
 import { normalizeForComparison } from "../lib/text";
@@ -8,8 +8,10 @@ import { Word } from "./Word";
 import { CommandHints } from "./CommandHints";
 
 type MemoryStageProps = {
+  breakdown: RunBreakdown | null;
   currentIndex: number;
   earnedMedals: MedalId[];
+  errorWordIndexes: Set<number>;
   hasTrailingSpace: boolean;
   inputRef: RefObject<HTMLTextAreaElement | null>;
   onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -26,8 +28,10 @@ type MemoryStageProps = {
 };
 
 export function MemoryStage({
+  breakdown,
   currentIndex,
   earnedMedals,
+  errorWordIndexes,
   hasTrailingSpace,
   inputRef,
   onKeyDown,
@@ -78,6 +82,7 @@ export function MemoryStage({
         <TypewriterDisplay
           currentIndex={currentIndex}
           currentTypedWord={currentTypedWord}
+          errorWordIndexes={errorWordIndexes}
           hasTrailingSpace={hasTrailingSpace}
           revealRest={revealRest}
           revealThrough={revealThrough}
@@ -119,6 +124,7 @@ export function MemoryStage({
               <Word
                 currentIndex={currentIndex}
                 expected={word}
+                hadError={errorWordIndexes.has(index)}
                 index={index}
                 isComplete={isComplete}
                 isRevealed={isRevealed}
@@ -154,7 +160,9 @@ export function MemoryStage({
         aria-hidden={!stats.isDone}
       >
         <span>locked in</span>
-        {xpGained === null ? null : <span>+{xpGained} XP</span>}
+        {xpGained === null ? null : (
+          <span>+{xpGained.toLocaleString()} XP</span>
+        )}
         {earnedMedals.map((medalId) => (
           <span
             className="rounded-md bg-muted px-2 py-0.5 text-foreground"
@@ -165,13 +173,84 @@ export function MemoryStage({
           </span>
         ))}
       </div>
+
+      {stats.isDone && breakdown !== null && (
+        <ScoreBreakdown breakdown={breakdown} />
+      )}
     </section>
+  );
+}
+
+function ScoreBreakdown({ breakdown }: { breakdown: RunBreakdown }) {
+  const {
+    base,
+    streakMultiplier,
+    streakBonus,
+    speedBonus,
+    cleanBonus,
+    hintBonus,
+    bestBonus,
+    hintPenalty,
+    errorPenalty,
+    total,
+  } = breakdown;
+
+  const appliedBase = base + streakBonus;
+  const baseLabel =
+    streakMultiplier !== 1
+      ? `base ×${String(streakMultiplier)}`
+      : "base";
+
+  const rows: { label: string; value: number; dim?: boolean }[] = [
+    { label: baseLabel, value: appliedBase },
+    ...(speedBonus > 0 ? [{ label: "speed", value: speedBonus }] : []),
+    ...(cleanBonus > 0 ? [{ label: "clean run", value: cleanBonus }] : []),
+    ...(hintBonus > 0 ? [{ label: "no hints", value: hintBonus }] : []),
+    ...(bestBonus > 0 ? [{ label: "new best!", value: bestBonus }] : []),
+    ...(hintPenalty > 0 ? [{ label: "hints", value: -hintPenalty, dim: true }] : []),
+    ...(errorPenalty > 0 ? [{ label: "errors", value: -errorPenalty, dim: true }] : []),
+  ];
+
+  return (
+    <div className="mx-auto mt-3 w-fit min-w-[200px] rounded-xl bg-card/70 px-4 py-3 font-mono text-xs">
+      <div className="grid gap-1">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-baseline justify-between gap-6">
+            <span className={cn("text-muted-foreground", row.dim && "opacity-60")}>
+              {row.label}
+            </span>
+            <span
+              className={cn(
+                "tabular-nums",
+                row.value < 0
+                  ? "text-destructive"
+                  : row.label.startsWith("base ×0")
+                    ? "text-amber-400"
+                    : "text-foreground",
+              )}
+            >
+              {row.value > 0 ? "+" : ""}
+              {row.value.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 border-t border-border/50 pt-2">
+        <div className="flex items-baseline justify-between gap-6">
+          <span className="font-bold text-foreground">total</span>
+          <span className="font-bold tabular-nums text-primary">
+            {total.toLocaleString()} XP
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
 type TypewriterDisplayProps = {
   currentIndex: number;
   currentTypedWord: string;
+  errorWordIndexes: Set<number>;
   hasTrailingSpace: boolean;
   revealRest: boolean;
   revealThrough: number;
@@ -185,6 +264,7 @@ type TypewriterDisplayProps = {
 function TypewriterDisplay({
   currentIndex,
   currentTypedWord,
+  errorWordIndexes,
   hasTrailingSpace,
   revealRest,
   revealThrough,
@@ -235,6 +315,7 @@ function TypewriterDisplay({
             key={`${word}-${index}`}
             currentIndex={currentIndex}
             expected={word}
+            hadError={errorWordIndexes.has(index)}
             index={index}
             isComplete={true}
             isRevealed={false}
@@ -251,6 +332,7 @@ function TypewriterDisplay({
                 key={`${word}-${index}`}
                 currentIndex={currentIndex}
                 expected={word}
+                hadError={errorWordIndexes.has(index)}
                 index={index}
                 isComplete={true}
                 isRevealed={false}
