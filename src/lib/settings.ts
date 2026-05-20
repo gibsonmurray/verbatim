@@ -17,6 +17,7 @@ export type Settings = {
   punctuationSensitive: boolean;
   accentSensitive: boolean;
   autoRevealCurrentWord: boolean;
+  autoCapitalize: boolean;
   autoFillFormatting: boolean;
   persistTabReveals: boolean;
   placeholderStyle: PlaceholderStyle;
@@ -28,6 +29,7 @@ export const defaultSettings: Settings = {
   punctuationSensitive: true,
   accentSensitive: true,
   autoRevealCurrentWord: true,
+  autoCapitalize: false,
   autoFillFormatting: false,
   persistTabReveals: true,
   placeholderStyle: "bars",
@@ -54,6 +56,8 @@ const isSettings = (value: unknown): value is Settings => {
     typeof settings.punctuationSensitive === "boolean" &&
     typeof settings.accentSensitive === "boolean" &&
     typeof settings.autoRevealCurrentWord === "boolean" &&
+    (settings.autoCapitalize === undefined ||
+      typeof settings.autoCapitalize === "boolean") &&
     (settings.autoFillFormatting === undefined ||
       typeof settings.autoFillFormatting === "boolean") &&
     (settings.persistTabReveals === undefined ||
@@ -77,6 +81,7 @@ export const loadLocalSettings = () => {
       punctuationSensitive: parsed.punctuationSensitive,
       accentSensitive: parsed.accentSensitive,
       autoRevealCurrentWord: parsed.autoRevealCurrentWord,
+      autoCapitalize: parsed.autoCapitalize ?? false,
       autoFillFormatting: parsed.autoFillFormatting ?? false,
       persistTabReveals: parsed.persistTabReveals ?? true,
       placeholderStyle: parsed.placeholderStyle,

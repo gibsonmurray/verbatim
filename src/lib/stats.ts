@@ -18,9 +18,14 @@ export function getStats(
   settings: Settings,
 ): MemorizeStats {
   const typedWords = typedWordsFrom(typedText);
-  const allSourceWordsTyped = typedWords.length >= sourceWords.length;
+  const isDone =
+    typedWords.length === sourceWords.length &&
+    sourceWords.length > 0 &&
+    sourceWords.every((word, index) =>
+      wordsMatch(typedWords[index] ?? "", word, settings),
+    );
   const finishedWords =
-    endsWithSpace(typedText) || allSourceWordsTyped
+    endsWithSpace(typedText) || isDone
       ? typedWords
       : typedWords.slice(0, -1);
   const checkedWords = finishedWords.slice(0, sourceWords.length);
@@ -62,11 +67,6 @@ export function getStats(
     complete,
     errors,
     hints: visibleHintIndexes.size,
-    isDone:
-      typedWords.length === sourceWords.length &&
-      sourceWords.length > 0 &&
-      sourceWords.every((word, index) =>
-        wordsMatch(typedWords[index] ?? "", word, settings),
-      ),
+    isDone,
   };
 }

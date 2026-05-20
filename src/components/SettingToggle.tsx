@@ -1,10 +1,4 @@
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldLabel,
-  FieldTitle,
-} from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
 type SettingToggleProps = {
@@ -23,21 +17,24 @@ export function SettingToggle({
   onChange,
 }: SettingToggleProps) {
   return (
-    <FieldLabel htmlFor={id} className="w-full">
-      <Field
-        orientation="horizontal"
-        className="rounded-3xl bg-muted/60 p-3"
-      >
-        <FieldContent>
-          <FieldTitle className="text-foreground">{label}</FieldTitle>
-          <FieldDescription>{description}</FieldDescription>
-        </FieldContent>
-        <Switch
-          id={id}
-          checked={checked}
-          onCheckedChange={onChange}
-        />
-      </Field>
-    </FieldLabel>
+    <Label
+      htmlFor={id}
+      className="group flex w-full cursor-pointer items-start justify-between gap-4 rounded-2xl px-2.5 py-2.5 transition-colors hover:bg-muted/45"
+    >
+      <span className="grid min-w-0 gap-1">
+        <span className="text-sm font-medium leading-none text-foreground">
+          {label}
+        </span>
+        <span className="text-xs leading-5 text-muted-foreground">
+          {description}
+        </span>
+      </span>
+      <Switch
+        id={id}
+        checked={checked}
+        onCheckedChange={onChange}
+        className="mt-0.5"
+      />
+    </Label>
   );
 }

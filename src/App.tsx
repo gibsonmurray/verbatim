@@ -28,6 +28,8 @@ import {
 import { getStats } from "./lib/stats";
 import {
   endsWithSpace,
+  completeCurrentWordFromSource,
+  formatTypedTextCasingFromSourceWords,
   formatTypedTextFromSource,
   normalizeText,
   removeLastTypedCharacter,
@@ -226,9 +228,33 @@ export default function App() {
     if (settings.autoFillFormatting && event.key === "Backspace") {
       event.preventDefault();
       setTypedText((currentText) =>
-        removeLastTypedCharacter(currentText, sourceText),
+        removeLastTypedCharacter(currentText, sourceText, {
+          autoCapitalize: settings.autoCapitalize,
+        }),
       );
       setWordHintIndexes([]);
+      return;
+    }
+
+    const isSpaceKey =
+      event.key === " " || event.key === "Space" || event.key === "Spacebar";
+
+    if (!settings.autoFillFormatting && (isSpaceKey || event.code === "Space")) {
+      event.preventDefault();
+
+      const nextTypedText = completeCurrentWordFromSource(
+        typedText,
+        sourceWords,
+        currentIndex,
+        { autoCapitalize: settings.autoCapitalize },
+      );
+
+      setTypedText(nextTypedText);
+
+      if (!settings.persistTabReveals && nextTypedText !== typedText) {
+        setWordHintIndexes([]);
+      }
+
       return;
     }
 
@@ -276,7 +302,11 @@ export default function App() {
 
   const updateTypedText = (value: string) => {
     const nextTypedText = settings.autoFillFormatting
-      ? formatTypedTextFromSource(value, sourceText)
+      ? formatTypedTextFromSource(value, sourceText, {
+          autoCapitalize: settings.autoCapitalize,
+        })
+      : settings.autoCapitalize
+        ? formatTypedTextCasingFromSourceWords(value, sourceWords)
       : value;
 
     setTypedText(nextTypedText);

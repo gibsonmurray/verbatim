@@ -61,7 +61,7 @@ export function MemoryStage({
         {sourceWords.map((word, index) => {
           const finishedCount = hasTrailingSpace
             ? typedWords.length
-            : typedWords.length >= sourceWords.length
+            : stats.isDone
               ? sourceWords.length
               : Math.max(0, typedWords.length - 1);
           const isComplete = index < finishedCount;

@@ -11,8 +11,12 @@ export function CommandHints() {
       aria-label="keyboard shortcuts"
     >
       <span>
-        <Kbd className="mr-1.5 text-primary">tab</Kbd>
+        <Kbd className="mr-1.5 text-primary">space</Kbd>
         next word
+      </span>
+      <span>
+        <Kbd className="mr-1.5 text-primary">tab</Kbd>
+        word hint
       </span>
       <span>
         <KbdGroup className="mr-1.5">
