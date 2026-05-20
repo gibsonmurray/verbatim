@@ -1,3 +1,17 @@
+## [1.4.0](https://github.com/gibsonmurray/verbatim/compare/v1.3.3...v1.4.0) (2026-05-20)
+
+### Features
+
+* add typewriter mode setting and enhance MemoryStage and SettingsPanel components ([bed58d6](https://github.com/gibsonmurray/verbatim/commit/bed58d62993783d19715a9814b4cf4562fd007a6))
+* enhance SettingToggle and SettingsPanel components with icon support and improved layout ([a2af52b](https://github.com/gibsonmurray/verbatim/commit/a2af52bbe3ace153b2eb1dc77f448a80e2b08ff7))
+* enhance text formatting and settings options for improved user experience ([0d2cc13](https://github.com/gibsonmurray/verbatim/commit/0d2cc1395464e2c33f30c04338693cb61c53aadf))
+* implement game profile and best run tracking with medal system ([41fc6e8](https://github.com/gibsonmurray/verbatim/commit/41fc6e8b4678b3a9e47909d0c2ba75b37bac33a5))
+
+### Bug Fixes
+
+* add dynamic class handling for main component to improve overlay visibility ([d3a11f9](https://github.com/gibsonmurray/verbatim/commit/d3a11f9d9fc1eddabb5fabe9f29a9d7688d081dc))
+* enhance StatItem component with minWidth prop and improve visibility of locked-in status in MemoryStage ([1d1a1be](https://github.com/gibsonmurray/verbatim/commit/1d1a1be8457c163b59ffdaf96593f2ff48aeee7e))
+
 ## [1.3.3](https://github.com/gibsonmurray/verbatim/compare/v1.3.2...v1.3.3) (2026-05-20)
 
 ### Bug Fixes
