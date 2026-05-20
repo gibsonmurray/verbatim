@@ -3,6 +3,7 @@ import { cn, meterClass } from "../lib/classNames";
 import { medals, type MedalId } from "../lib/game";
 import type { Settings } from "../lib/settings";
 import type { MemorizeStats } from "../lib/stats";
+import { normalizeForComparison } from "../lib/text";
 import { Word } from "./Word";
 import { CommandHints } from "./CommandHints";
 
@@ -73,47 +74,62 @@ export function MemoryStage({
         </span>
       </div>
 
-      <div
-        className="mx-auto flex w-full max-w-[1580px] flex-wrap content-center justify-start gap-x-3 gap-y-2.5 font-mono leading-[1.55] text-muted-foreground select-none [letter-spacing:0] min-[900px]:gap-x-4 min-[900px]:gap-y-3.5"
-        style={{ fontSize: "var(--word-size)" }}
-        aria-live="polite"
-      >
-        {sourceWords.map((word, index) => {
-          const finishedCount = hasTrailingSpace
-            ? typedWords.length
-            : stats.isDone
-              ? sourceWords.length
-              : Math.max(0, typedWords.length - 1);
-          const isComplete = index < finishedCount;
-          const typed = isComplete
-            ? typedWords[index] ?? ""
-            : index === currentIndex
-              ? currentTypedWord
-              : "";
-          const hasActiveTabHints = wordHintIndexes.some(
-            (hintIndex) => hintIndex >= currentIndex,
-          );
-          const isRevealed =
-            index <= revealThrough ||
-            (settings.autoRevealCurrentWord && index === currentIndex) ||
-            (index === currentIndex && hasActiveTabHints) ||
-            (index >= currentIndex && wordHintIndexes.includes(index)) ||
-            (revealRest && index >= currentIndex);
+      {settings.typewriterMode ? (
+        <TypewriterDisplay
+          currentIndex={currentIndex}
+          currentTypedWord={currentTypedWord}
+          hasTrailingSpace={hasTrailingSpace}
+          revealRest={revealRest}
+          revealThrough={revealThrough}
+          settings={settings}
+          sourceWords={sourceWords}
+          stats={stats}
+          typedWords={typedWords}
+          wordHintIndexes={wordHintIndexes}
+        />
+      ) : (
+        <div
+          className="mx-auto flex w-full max-w-[1580px] flex-wrap content-center justify-start gap-x-3 gap-y-2.5 font-mono leading-[1.55] text-muted-foreground select-none [letter-spacing:0] min-[900px]:gap-x-4 min-[900px]:gap-y-3.5"
+          style={{ fontSize: "var(--word-size)" }}
+          aria-live="polite"
+        >
+          {sourceWords.map((word, index) => {
+            const finishedCount = hasTrailingSpace
+              ? typedWords.length
+              : stats.isDone
+                ? sourceWords.length
+                : Math.max(0, typedWords.length - 1);
+            const isComplete = index < finishedCount;
+            const typed = isComplete
+              ? typedWords[index] ?? ""
+              : index === currentIndex
+                ? currentTypedWord
+                : "";
+            const hasActiveTabHints = wordHintIndexes.some(
+              (hintIndex) => hintIndex >= currentIndex,
+            );
+            const isRevealed =
+              index <= revealThrough ||
+              (settings.autoRevealCurrentWord && index === currentIndex) ||
+              (index === currentIndex && hasActiveTabHints) ||
+              (index >= currentIndex && wordHintIndexes.includes(index)) ||
+              (revealRest && index >= currentIndex);
 
-          return (
-            <Word
-              currentIndex={currentIndex}
-              expected={word}
-              index={index}
-              isComplete={isComplete}
-              isRevealed={isRevealed}
-              key={`${word}-${index}`}
-              settings={settings}
-              typed={typed}
-            />
-          );
-        })}
-      </div>
+            return (
+              <Word
+                currentIndex={currentIndex}
+                expected={word}
+                index={index}
+                isComplete={isComplete}
+                isRevealed={isRevealed}
+                key={`${word}-${index}`}
+                settings={settings}
+                typed={typed}
+              />
+            );
+          })}
+        </div>
+      )}
 
       <textarea
         ref={inputRef}
@@ -150,5 +166,150 @@ export function MemoryStage({
         ))}
       </div>
     </section>
+  );
+}
+
+type TypewriterDisplayProps = {
+  currentIndex: number;
+  currentTypedWord: string;
+  hasTrailingSpace: boolean;
+  revealRest: boolean;
+  revealThrough: number;
+  settings: Settings;
+  sourceWords: string[];
+  stats: MemorizeStats;
+  typedWords: string[];
+  wordHintIndexes: number[];
+};
+
+function TypewriterDisplay({
+  currentIndex,
+  currentTypedWord,
+  hasTrailingSpace,
+  revealRest,
+  revealThrough,
+  settings,
+  sourceWords,
+  stats,
+  typedWords,
+  wordHintIndexes,
+}: TypewriterDisplayProps) {
+  const completedCount = hasTrailingSpace
+    ? typedWords.length
+    : stats.isDone
+      ? sourceWords.length
+      : Math.max(0, typedWords.length - 1);
+
+  const hasActiveTabHints = wordHintIndexes.some(
+    (hintIndex) => hintIndex >= currentIndex,
+  );
+
+  // autoRevealCurrentWord intentionally excluded: it would immediately expand the
+  // current word to full width on each new word, breaking the typewriter grow effect.
+  // Tab / Shift-Tab remain available for explicit hints.
+  const currentWordIsRevealed =
+    currentIndex <= revealThrough ||
+    hasActiveTabHints ||
+    wordHintIndexes.includes(currentIndex) ||
+    revealRest;
+
+  const currentWord = stats.isDone ? "" : (sourceWords[currentIndex] ?? "");
+  const hintChars = currentWordIsRevealed
+    ? currentWord.slice(currentTypedWord.length)
+    : "";
+
+  return (
+    <div
+      className={cn(
+        "mx-auto w-full max-w-[1580px] overflow-hidden font-mono leading-[1.55] text-muted-foreground select-none [letter-spacing:0]",
+        stats.isDone
+          ? "flex flex-wrap items-baseline justify-start gap-x-3 min-[900px]:gap-x-4"
+          : "grid h-[1.55em] items-center [grid-template-columns:1fr_2px_1fr]",
+      )}
+      style={{ fontSize: "var(--word-size)" }}
+      aria-live="polite"
+    >
+      {stats.isDone ? (
+        sourceWords.map((word, index) => (
+          <Word
+            key={`${word}-${index}`}
+            currentIndex={currentIndex}
+            expected={word}
+            index={index}
+            isComplete={true}
+            isRevealed={false}
+            settings={settings}
+            typed={typedWords[index] ?? ""}
+          />
+        ))
+      ) : (
+        <>
+          {/* Left column: completed words + typed portion of current word */}
+          <div className="flex min-w-0 items-center justify-end gap-x-3 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_20%,black)] min-[900px]:gap-x-4">
+            {sourceWords.slice(0, completedCount).map((word, index) => (
+              <Word
+                key={`${word}-${index}`}
+                currentIndex={currentIndex}
+                expected={word}
+                index={index}
+                isComplete={true}
+                isRevealed={false}
+                settings={settings}
+                typed={typedWords[index] ?? ""}
+              />
+            ))}
+            <TypedWordChars
+              expected={currentWord}
+              settings={settings}
+              typed={currentTypedWord}
+            />
+          </div>
+
+          {/* Center column: cursor — always fixed at the midpoint */}
+          <span
+            className="h-[1em] self-start translate-y-[0.35em] animate-pulse rounded-full bg-primary"
+            aria-hidden="true"
+          />
+
+          {/* Right column: Tab-revealed hint characters */}
+          <div className="min-w-0 overflow-hidden">
+            {hintChars ? (
+              <span className="whitespace-pre opacity-[var(--hint-opacity)]">
+                {hintChars}
+              </span>
+            ) : null}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+type TypedWordCharsProps = {
+  expected: string;
+  settings: Settings;
+  typed: string;
+};
+
+function TypedWordChars({ expected, settings, typed }: TypedWordCharsProps) {
+  return (
+    <span className="inline-flex min-h-[1.45em] items-baseline whitespace-pre">
+      {typed.slice(0, expected.length).split("").map((char, i) => {
+        const expectedChar = expected[i] ?? "";
+        const matches =
+          normalizeForComparison(char, settings) ===
+          normalizeForComparison(expectedChar, settings);
+        return (
+          <span key={i} className={matches ? "text-foreground" : "text-destructive"}>
+            {char}
+          </span>
+        );
+      })}
+      {typed.slice(expected.length).split("").map((char, i) => (
+        <span key={`e${i}`} className="text-destructive opacity-85">
+          {char}
+        </span>
+      ))}
+    </span>
   );
 }

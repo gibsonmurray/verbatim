@@ -179,35 +179,46 @@ export function SettingsPanel({
           </h3>
           <p className="text-right text-xs text-muted-foreground">How prompts appear.</p>
         </div>
+        <div className="grid gap-0.5">
+          <SettingToggle
+            checked={settings.typewriterMode}
+            description="No placeholders — text grows left from center as you type."
+            id="typewriter-mode"
+            label="Typewriter mode"
+            onChange={(checked) => onUpdateSetting("typewriterMode", checked)}
+          />
+        </div>
         <div className="grid grid-cols-1 gap-4 px-2.5 min-[500px]:grid-cols-2">
-          <Field>
-            <FieldLabel htmlFor="placeholder-select">Placeholders</FieldLabel>
-            <Select
-              items={placeholderItems}
-              value={settings.placeholderStyle}
-              onValueChange={(value) =>
-                onUpdateSetting(
-                  "placeholderStyle",
-                  value as PlaceholderStyle,
-                )
-              }
-            >
-              <SelectTrigger id="placeholder-select" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {placeholderItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
+          {!settings.typewriterMode && (
+            <Field>
+              <FieldLabel htmlFor="placeholder-select">Placeholders</FieldLabel>
+              <Select
+                items={placeholderItems}
+                value={settings.placeholderStyle}
+                onValueChange={(value) =>
+                  onUpdateSetting(
+                    "placeholderStyle",
+                    value as PlaceholderStyle,
+                  )
+                }
+              >
+                <SelectTrigger id="placeholder-select" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {placeholderItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
 
-          <Field>
+          <Field className={settings.typewriterMode ? "col-span-full" : undefined}>
             <div className="flex items-center justify-between gap-3">
               <FieldLabel htmlFor="word-size-slider">Type size</FieldLabel>
               <FieldDescription>{settings.wordSize}px</FieldDescription>

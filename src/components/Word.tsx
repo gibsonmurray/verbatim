@@ -71,6 +71,16 @@ export function Word({
     <span className="inline-flex min-h-[1.45em] items-baseline whitespace-pre text-muted-foreground">
       {characters.map((character, characterIndex) => {
         const typedCharacter = typed[characterIndex];
+        const isAtCursor = cursorInsideExpected && typed.length === characterIndex;
+
+        if (settings.typewriterMode && typedCharacter === undefined && !isRevealed) {
+          return isAtCursor ? (
+            <span className="inline-flex items-baseline" key={`${character}-${characterIndex}`}>
+              <TextCursor />
+            </span>
+          ) : null;
+        }
+
         const typedCharacterMatches =
           typedCharacter !== undefined &&
           normalizeForComparison(typedCharacter, settings) ===
@@ -86,7 +96,7 @@ export function Word({
 
         return (
           <span className="inline-flex items-baseline" key={`${character}-${characterIndex}`}>
-            {cursorInsideExpected && typed.length === characterIndex ? <TextCursor /> : null}
+            {isAtCursor ? <TextCursor /> : null}
             <span className={className}>{typedCharacter ?? character}</span>
           </span>
         );

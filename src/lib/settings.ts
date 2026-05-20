@@ -22,6 +22,7 @@ export type Settings = {
   persistTabReveals: boolean;
   placeholderStyle: PlaceholderStyle;
   wordSize: number;
+  typewriterMode: boolean;
 };
 
 export const defaultSettings: Settings = {
@@ -34,6 +35,7 @@ export const defaultSettings: Settings = {
   persistTabReveals: true,
   placeholderStyle: "bars",
   wordSize: 34,
+  typewriterMode: false,
 };
 
 const settingsStorageKey = "verbatim.settings.v1";
@@ -64,7 +66,9 @@ const isSettings = (value: unknown): value is Settings => {
       typeof settings.persistTabReveals === "boolean") &&
     ["bars", "dots", "letters"].includes(String(settings.placeholderStyle)) &&
     typeof settings.wordSize === "number" &&
-    Number.isFinite(settings.wordSize)
+    Number.isFinite(settings.wordSize) &&
+    (settings.typewriterMode === undefined ||
+      typeof settings.typewriterMode === "boolean")
   );
 };
 
@@ -86,6 +90,7 @@ export const loadLocalSettings = () => {
       persistTabReveals: parsed.persistTabReveals ?? true,
       placeholderStyle: parsed.placeholderStyle,
       wordSize: clamp(parsed.wordSize, 24, 46),
+      typewriterMode: parsed.typewriterMode ?? false,
     };
   } catch {
     return null;
