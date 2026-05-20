@@ -1,3 +1,9 @@
+## [1.3.3](https://github.com/gibsonmurray/verbatim/compare/v1.3.2...v1.3.3) (2026-05-20)
+
+### Bug Fixes
+
+* update capitalization for consistency in meta tags and app header ([b518aeb](https://github.com/gibsonmurray/verbatim/commit/b518aebf8fbc7f4fdf8416d4e95beb84a2fa82ee))
+
 ## [1.3.2](https://github.com/gibsonmurray/verbatim/compare/v1.3.1...v1.3.2) (2026-05-19)
 
 ### Bug Fixes
