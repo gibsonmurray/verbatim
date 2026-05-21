@@ -1,3 +1,9 @@
+## [1.8.0](https://github.com/gibsonmurray/verbatim/compare/v1.7.0...v1.8.0) (2026-05-21)
+
+### Features
+
+* add round analysis feature with data visualization ([ddc0ddd](https://github.com/gibsonmurray/verbatim/commit/ddc0ddd51fa948cdb838d9dfc35aabfb2a9a2e08))
+
 ## [1.7.0](https://github.com/gibsonmurray/verbatim/compare/v1.6.0...v1.7.0) (2026-05-21)
 
 ### Features
