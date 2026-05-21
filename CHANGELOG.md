@@ -1,3 +1,15 @@
+## [1.6.0](https://github.com/gibsonmurray/verbatim/compare/v1.5.0...v1.6.0) (2026-05-21)
+
+### Features
+
+* enhance game mechanics with streak tracking, error handling, and score breakdown ([a2b2826](https://github.com/gibsonmurray/verbatim/commit/a2b2826b58b517ec8d4a2d09eecbda5594ac266a))
+* implement scoring system with word-based points and streak multipliers ([42d80ab](https://github.com/gibsonmurray/verbatim/commit/42d80ab089c01cf4c3023b56ed2fc9b2c99ce28a))
+
+### Bug Fixes
+
+* refactor scoring system to track completed words and update streak logic ([63db11c](https://github.com/gibsonmurray/verbatim/commit/63db11c375a5d088170d8cad3dd4567a3cf13143))
+* update favicon and logo SVGs for consistency and improved design ([80037da](https://github.com/gibsonmurray/verbatim/commit/80037da1598ac3094cd2b065ad9d18493f54db25))
+
 ## [1.5.0](https://github.com/gibsonmurray/verbatim/compare/v1.4.0...v1.5.0) (2026-05-20)
 
 ### Features
