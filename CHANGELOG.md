@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/gibsonmurray/verbatim/compare/v1.6.0...v1.7.0) (2026-05-21)
+
+### Features
+
+* enhance metadata and add Open Graph image for improved SEO and social sharing ([ac1ec62](https://github.com/gibsonmurray/verbatim/commit/ac1ec62bbfccc96568a74cc95aaf81c13360071a))
+
 ## [1.6.0](https://github.com/gibsonmurray/verbatim/compare/v1.5.0...v1.6.0) (2026-05-21)
 
 ### Features
