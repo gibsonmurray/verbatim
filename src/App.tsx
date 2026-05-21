@@ -41,6 +41,13 @@ import {
   saveCompletedRun,
   type BestRun,
 } from "./lib/records";
+import {
+  createRoundAnalysis,
+  loadRecentRoundAnalyses,
+  saveRoundAnalysis,
+  type RoundAnalysis,
+  type RoundEndReason,
+} from "./lib/analysis";
 import { cn } from "./lib/classNames";
 import { getStats } from "./lib/stats";
 import {
@@ -96,6 +103,8 @@ export default function App() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const wasDoneRef = useRef(false);
   const prevCompletedCountRef = useRef(0);
+  const currentRoundIdRef = useRef<string | null>(null);
+  const savedRoundAnalysisIdsRef = useRef(new Set<string>());
   // Mirrors errorWordIndexes state for synchronous reads in effects
   const errorWordIndexesRef = useRef(new Set<number>());
 
@@ -132,6 +141,9 @@ export default function App() {
   const [fullRevealIndex, setFullRevealIndex] = useState<number | null>(null);
   const [errorWordIndexes, setErrorWordIndexes] = useState<Set<number>>(new Set());
   const [breakdown, setBreakdown] = useState<RunBreakdown | null>(null);
+  const [latestRoundAnalysis, setLatestRoundAnalysis] =
+    useState<RoundAnalysis | null>(null);
+  const [roundAnalyses, setRoundAnalyses] = useState<RoundAnalysis[]>([]);
 
   const sourceWords = useMemo(() => toWords(sourceText), [sourceText]);
   const sourceDraftWords = useMemo(() => toWords(sourceDraft), [sourceDraft]);
@@ -261,6 +273,9 @@ export default function App() {
 
   useEffect(() => {
     setGameProfile(loadGameProfile());
+    void loadRecentRoundAnalyses().then((analyses) => {
+      if (analyses) setRoundAnalyses(analyses);
+    });
   }, []);
 
   useEffect(() => {
@@ -316,6 +331,60 @@ export default function App() {
     typedWords,
   ]);
 
+  const getCurrentRoundId = () => {
+    currentRoundIdRef.current =
+      currentRoundIdRef.current ??
+      (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`);
+    return currentRoundIdRef.current;
+  };
+
+  const saveCurrentRoundAnalysis = ({
+    breakdown: analysisBreakdown,
+    elapsedMs: analysisElapsedMs,
+    endReason,
+    isNewBest: analysisIsNewBest,
+    xpGained: analysisXpGained,
+  }: {
+    breakdown: RunBreakdown | null;
+    elapsedMs: number;
+    endReason: RoundEndReason;
+    isNewBest: boolean;
+    xpGained: number | null;
+  }) => {
+    const roundId = getCurrentRoundId();
+    if (savedRoundAnalysisIdsRef.current.has(roundId)) return null;
+
+    const analysis = createRoundAnalysis({
+      breakdown: analysisBreakdown,
+      completedWordCount,
+      elapsedMs: analysisElapsedMs,
+      endedAt: Date.now(),
+      endReason,
+      errorWordIndexes: errorWordIndexesRef.current,
+      hadFullReveal,
+      hintedWordIndexes,
+      id: roundId,
+      isNewBest: analysisIsNewBest,
+      settings,
+      sourceText,
+      sourceWords,
+      typedWords,
+      xpGained: analysisXpGained,
+    });
+
+    savedRoundAnalysisIdsRef.current.add(roundId);
+    setRoundAnalyses((currentAnalyses) => [
+      analysis,
+      ...currentAnalyses.filter((currentAnalysis) => currentAnalysis.id !== roundId),
+    ]);
+    if (endReason === "completed") {
+      setLatestRoundAnalysis(analysis);
+    }
+    void saveRoundAnalysis(analysis);
+
+    return analysis;
+  };
+
   useEffect(() => {
     if (stats.isDone && !wasDoneRef.current) {
       const finalElapsedMs = runStartedAt ? Math.max(0, Date.now() - runStartedAt) : 0;
@@ -335,6 +404,13 @@ export default function App() {
         isNewBest: savedRun.isNewBest,
         wordScore: roundScore.wordScore,
         wordCount: sourceWords.length,
+      });
+      saveCurrentRoundAnalysis({
+        breakdown: savedGame.breakdown,
+        elapsedMs: finalElapsedMs,
+        endReason: "completed",
+        isNewBest: savedRun.isNewBest,
+        xpGained: savedGame.xpGained,
       });
 
       setFinishedElapsedMs(finalElapsedMs);
@@ -365,19 +441,27 @@ export default function App() {
     wasDoneRef.current = stats.isDone;
   }, [
     bestRunKey,
+    completedWordCount,
     hadFullReveal,
     hadMistake,
+    hintedWordIndexes,
     roundScore.wordScore,
     runStartedAt,
+    settings,
+    sourceText,
+    sourceWords,
     sourceWords.length,
     stats.hints,
     stats.isDone,
+    typedWords,
   ]);
 
   const startRun = () => {
     if (runStartedAt !== null || stats.isDone) return;
 
     const startedAt = Date.now();
+    currentRoundIdRef.current =
+      globalThis.crypto?.randomUUID?.() ?? `${startedAt}-${Math.random()}`;
     setRunStartedAt(startedAt);
     setNowMs(startedAt);
     setFinishedElapsedMs(null);
@@ -390,6 +474,16 @@ export default function App() {
   };
 
   const resetAttempt = (options: { focus?: boolean } = {}) => {
+    if (runStartedAt !== null && !stats.isDone) {
+      saveCurrentRoundAnalysis({
+        breakdown: null,
+        elapsedMs: Math.max(0, Date.now() - runStartedAt),
+        endReason: "reset",
+        isNewBest: false,
+        xpGained: null,
+      });
+    }
+
     setTypedText("");
     setRevealThrough(-1);
     setRevealRest(false);
@@ -406,6 +500,7 @@ export default function App() {
     setErrorWordIndexes(new Set());
     setBreakdown(null);
     prevCompletedCountRef.current = 0;
+    currentRoundIdRef.current = null;
 
     if (options.focus ?? true) {
       window.requestAnimationFrame(() => inputRef.current?.focus());
@@ -659,6 +754,8 @@ export default function App() {
           typedWords={typedWords}
           wordHintIndexes={wordHintIndexes}
           xpGained={xpGained}
+          latestRoundAnalysis={latestRoundAnalysis}
+          roundAnalyses={roundAnalyses}
         />
       </section>
 

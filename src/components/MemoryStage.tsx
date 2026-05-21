@@ -1,11 +1,37 @@
 import { type RefObject, type KeyboardEvent } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { cn, meterClass } from "../lib/classNames";
 import { medals, type MedalId, type RunBreakdown } from "../lib/game";
+import { formatElapsedTime } from "../lib/records";
 import type { Settings } from "../lib/settings";
 import type { MemorizeStats } from "../lib/stats";
+import type { RoundAnalysis } from "../lib/analysis";
 import { normalizeForComparison } from "../lib/text";
 import { Word } from "./Word";
 import { CommandHints } from "./CommandHints";
+import { Badge } from "./ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "./ui/chart";
+import { Separator } from "./ui/separator";
 
 type MemoryStageProps = {
   breakdown: RunBreakdown | null;
@@ -25,6 +51,8 @@ type MemoryStageProps = {
   typedWords: string[];
   wordHintIndexes: number[];
   xpGained: number | null;
+  latestRoundAnalysis: RoundAnalysis | null;
+  roundAnalyses: RoundAnalysis[];
 };
 
 export function MemoryStage({
@@ -45,6 +73,8 @@ export function MemoryStage({
   typedWords,
   wordHintIndexes,
   xpGained,
+  latestRoundAnalysis,
+  roundAnalyses,
 }: MemoryStageProps) {
   const totalWords = sourceWords.length;
   const currentWordNumber = stats.isDone
@@ -177,6 +207,13 @@ export function MemoryStage({
       {stats.isDone && breakdown !== null && (
         <ScoreBreakdown breakdown={breakdown} />
       )}
+
+      {stats.isDone && latestRoundAnalysis?.endReason === "completed" ? (
+        <RoundAnalysisPanel
+          analysis={latestRoundAnalysis}
+          roundAnalyses={roundAnalyses}
+        />
+      ) : null}
     </section>
   );
 }
@@ -230,6 +267,224 @@ function ScoreBreakdown({ breakdown }: { breakdown: RunBreakdown }) {
             {total.toLocaleString()} XP
           </span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const analysisChartConfig = {
+  value: {
+    label: "Score",
+    color: "var(--primary)",
+  },
+} satisfies ChartConfig;
+
+const trendChartConfig = {
+  accuracy: {
+    label: "Accuracy",
+    color: "var(--primary)",
+  },
+  pace: {
+    label: "Pace",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig;
+
+const average = (values: number[]) =>
+  values.length
+    ? Math.round(values.reduce((total, value) => total + value, 0) / values.length)
+    : 0;
+
+function RoundAnalysisPanel({
+  analysis,
+  roundAnalyses,
+}: {
+  analysis: RoundAnalysis;
+  roundAnalyses: RoundAnalysis[];
+}) {
+  const paceScore = Math.min(
+    100,
+    Math.round((analysis.metrics.wordsPerMinute / 60) * 100),
+  );
+  const chartData = [
+    { label: "progress", value: analysis.metrics.progress },
+    { label: "accuracy", value: analysis.metrics.accuracy },
+    { label: "pace", value: paceScore },
+  ];
+  const focusWords = analysis.focusWords.slice(0, 5);
+  const completedAnalyses = roundAnalyses
+    .filter((roundAnalysis) => roundAnalysis.endReason === "completed")
+    .sort((first, second) => first.endedAt - second.endedAt);
+  const trendRounds = completedAnalyses.slice(-8);
+  const trendData = trendRounds.map((roundAnalysis, index) => ({
+    accuracy: roundAnalysis.metrics.accuracy,
+    pace: Math.min(100, Math.round((roundAnalysis.metrics.wordsPerMinute / 60) * 100)),
+    round: `${completedAnalyses.length - trendRounds.length + index + 1}`,
+  }));
+  const recentCompleted = completedAnalyses.slice(-5);
+  const previousCompleted = completedAnalyses.slice(-10, -5);
+  const recentAccuracy = average(
+    recentCompleted.map((roundAnalysis) => roundAnalysis.metrics.accuracy),
+  );
+  const previousAccuracy = average(
+    previousCompleted.map((roundAnalysis) => roundAnalysis.metrics.accuracy),
+  );
+  const accuracyDelta =
+    previousCompleted.length > 0 ? recentAccuracy - previousAccuracy : null;
+  const resetCount = roundAnalyses.filter(
+    (roundAnalysis) => roundAnalysis.endReason === "reset",
+  ).length;
+  const averageWpm = average(
+    completedAnalyses.map((roundAnalysis) => roundAnalysis.metrics.wordsPerMinute),
+  );
+
+  return (
+    <Card
+      size="sm"
+      className="mx-auto mt-6 w-full max-w-[860px] rounded-2xl bg-card/80 shadow-sm"
+    >
+      <CardHeader className="gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle>round analysis</CardTitle>
+          <Badge variant="secondary">completed</Badge>
+          <Badge variant="outline">saved locally</Badge>
+        </div>
+        <CardDescription>{analysis.headline}</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <div className="grid gap-4 min-[720px]:grid-cols-[1fr_220px]">
+          <ChartContainer
+            config={analysisChartConfig}
+            className="h-[150px] w-full"
+          >
+            <BarChart
+              accessibilityLayer
+              data={chartData}
+              layout="vertical"
+              margin={{ left: 0, right: 12 }}
+            >
+              <CartesianGrid horizontal={false} />
+              <XAxis type="number" domain={[0, 100]} hide />
+              <YAxis
+                axisLine={false}
+                dataKey="label"
+                tickLine={false}
+                tickMargin={8}
+                type="category"
+                width={64}
+              />
+              <ChartTooltip
+                content={<ChartTooltipContent hideLabel />}
+                cursor={false}
+              />
+              <Bar dataKey="value" fill="var(--color-value)" radius={5} />
+            </BarChart>
+          </ChartContainer>
+
+          <div className="grid grid-cols-2 gap-2 font-mono text-xs min-[720px]:grid-cols-1">
+            <AnalysisMetric label="time" value={formatElapsedTime(analysis.metrics.elapsedMs)} />
+            <AnalysisMetric
+              label="wpm"
+              value={analysis.metrics.wordsPerMinute.toLocaleString()}
+            />
+            <AnalysisMetric
+              label="hints"
+              value={analysis.metrics.hints.toLocaleString()}
+            />
+            <AnalysisMetric
+              label="misses"
+              value={analysis.metrics.mistakes.toLocaleString()}
+            />
+          </div>
+        </div>
+
+        <Separator />
+        <div className="grid gap-4 min-[720px]:grid-cols-[1fr_220px]">
+          <ChartContainer config={trendChartConfig} className="h-[150px] w-full">
+            <LineChart
+              accessibilityLayer
+              data={trendData}
+              margin={{ left: 0, right: 12, top: 8 }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                axisLine={false}
+                dataKey="round"
+                tickLine={false}
+                tickMargin={8}
+              />
+              <YAxis domain={[0, 100]} hide />
+              <ChartTooltip content={<ChartTooltipContent />} cursor={false} />
+              <Line
+                dataKey="accuracy"
+                dot={false}
+                stroke="var(--color-accuracy)"
+                strokeWidth={2}
+                type="monotone"
+              />
+              <Line
+                dataKey="pace"
+                dot={false}
+                stroke="var(--color-pace)"
+                strokeWidth={2}
+                type="monotone"
+              />
+            </LineChart>
+          </ChartContainer>
+
+          <div className="grid grid-cols-2 gap-2 font-mono text-xs min-[720px]:grid-cols-1">
+            <AnalysisMetric
+              label="locks"
+              value={completedAnalyses.length.toLocaleString()}
+            />
+            <AnalysisMetric label="resets" value={resetCount.toLocaleString()} />
+            <AnalysisMetric label="avg acc" value={`${recentAccuracy}%`} />
+            <AnalysisMetric
+              label="trend"
+              value={accuracyDelta === null ? "--" : `${accuracyDelta > 0 ? "+" : ""}${accuracyDelta}%`}
+            />
+            <AnalysisMetric label="avg wpm" value={averageWpm.toLocaleString()} />
+          </div>
+        </div>
+
+        {focusWords.length > 0 ? (
+          <>
+            <Separator />
+            <div className="flex flex-wrap gap-2">
+              {focusWords.map((word) => (
+                <Badge
+                  key={`${word.index}-${word.reason}`}
+                  variant={word.reason === "missed" ? "destructive" : "outline"}
+                  title={
+                    word.typed
+                      ? `typed: ${word.typed}`
+                      : `word ${word.index + 1}`
+                  }
+                >
+                  {word.expected}
+                </Badge>
+              ))}
+            </div>
+          </>
+        ) : null}
+
+        <Separator />
+        <div className="grid gap-2 text-sm text-muted-foreground">
+          {[...analysis.strengths, ...analysis.nextSteps].slice(0, 4).map((item) => (
+            <p key={item}>{item}</p>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AnalysisMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-muted/45 px-3 py-2">
+      <div className="text-muted-foreground">{label}</div>
+      <div className="mt-1 text-base font-bold text-foreground tabular-nums">
+        {value}
       </div>
     </div>
   );
