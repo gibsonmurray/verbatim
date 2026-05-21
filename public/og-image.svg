@@ -1,0 +1,24 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Verbatim memorization practice app</title>
+  <desc id="desc">A social preview for Verbatim, a focused passage memorization app.</desc>
+  <rect width="1200" height="630" fill="#101214"/>
+  <rect x="72" y="72" width="1056" height="486" rx="38" fill="#171B1F" stroke="#2E363D" stroke-width="2"/>
+  <circle cx="128" cy="128" r="12" fill="#18D2AD"/>
+  <circle cx="168" cy="128" r="12" fill="#F5F1E9" opacity="0.72"/>
+  <circle cx="208" cy="128" r="12" fill="#6D7A86"/>
+  <g transform="translate(850 112)">
+    <rect width="150" height="150" rx="36" fill="#101214" stroke="#2E363D" stroke-width="2"/>
+    <path d="M32 40L66 110L100 40" stroke="#F5F1E9" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M122 30V120" stroke="#18D2AD" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  <text x="128" y="236" fill="#F5F1E9" font-family="Inter, Figtree, Arial, sans-serif" font-size="86" font-weight="800">Verbatim</text>
+  <text x="132" y="300" fill="#18D2AD" font-family="Inter, Figtree, Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="2">MEMORIZATION PRACTICE</text>
+  <text x="128" y="382" fill="#D7D1C7" font-family="Inter, Figtree, Arial, sans-serif" font-size="38" font-weight="500">Practice passages from memory with</text>
+  <text x="128" y="434" fill="#D7D1C7" font-family="Inter, Figtree, Arial, sans-serif" font-size="38" font-weight="500">focused typing, hints, and saved texts.</text>
+  <rect x="128" y="494" width="250" height="34" rx="17" fill="#18D2AD" opacity="0.16"/>
+  <text x="154" y="518" fill="#9DF0DB" font-family="Inter, Figtree, Arial, sans-serif" font-size="20" font-weight="700">TYPE FROM MEMORY</text>
+  <rect x="404" y="494" width="150" height="34" rx="17" fill="#F5F1E9" opacity="0.12"/>
+  <text x="430" y="518" fill="#F5F1E9" font-family="Inter, Figtree, Arial, sans-serif" font-size="20" font-weight="700">GET HINTS</text>
+  <rect x="580" y="494" width="170" height="34" rx="17" fill="#F5F1E9" opacity="0.12"/>
+  <text x="606" y="518" fill="#F5F1E9" font-family="Inter, Figtree, Arial, sans-serif" font-size="20" font-weight="700">SAVE TEXTS</text>
+</svg>
