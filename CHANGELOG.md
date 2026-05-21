@@ -1,3 +1,9 @@
+## [1.5.0](https://github.com/gibsonmurray/verbatim/compare/v1.4.0...v1.5.0) (2026-05-20)
+
+### Features
+
+* add application version display in SettingsPanel and define __APP_VERSION__ in Vite config ([2d225dd](https://github.com/gibsonmurray/verbatim/commit/2d225dd76d1f42f3c39b7d5c026085089a52a6a7))
+
 ## [1.4.0](https://github.com/gibsonmurray/verbatim/compare/v1.3.3...v1.4.0) (2026-05-20)
 
 ### Features
