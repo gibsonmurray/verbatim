@@ -12,9 +12,7 @@ export type MemorizeStats = {
 export function getStats(
   sourceWords: string[],
   typedText: string,
-  revealThrough: number,
-  revealRest: boolean,
-  wordHintIndexes: number[],
+  hintedWordIndexes: number[],
   settings: Settings,
 ): MemorizeStats {
   const typedWords = typedWordsFrom(typedText);
@@ -39,26 +37,10 @@ export function getStats(
   const complete = sourceWords.length
     ? Math.round((checkedWords.length / sourceWords.length) * 100)
     : 0;
-  const visibleHintIndexes = new Set<number>();
-  const lastRevealThroughIndex = Math.min(revealThrough, sourceWords.length - 1);
-
-  for (let index = 0; index <= lastRevealThroughIndex; index += 1) {
-    visibleHintIndexes.add(index);
-  }
-
-  if (revealRest) {
-    for (
-      let index = Math.max(0, revealThrough + 1);
-      index < sourceWords.length;
-      index += 1
-    ) {
-      visibleHintIndexes.add(index);
-    }
-  }
-
-  wordHintIndexes.forEach((index) => {
+  const usedHintIndexes = new Set<number>();
+  hintedWordIndexes.forEach((index) => {
     if (index >= 0 && index < sourceWords.length) {
-      visibleHintIndexes.add(index);
+      usedHintIndexes.add(index);
     }
   });
 
@@ -66,7 +48,7 @@ export function getStats(
     accuracy,
     complete,
     errors,
-    hints: visibleHintIndexes.size,
+    hints: usedHintIndexes.size,
     isDone,
   };
 }

@@ -183,9 +183,7 @@ export function MemoryStage({
 
 function ScoreBreakdown({ breakdown }: { breakdown: RunBreakdown }) {
   const {
-    base,
-    streakMultiplier,
-    streakBonus,
+    wordScore,
     speedBonus,
     cleanBonus,
     hintBonus,
@@ -195,14 +193,8 @@ function ScoreBreakdown({ breakdown }: { breakdown: RunBreakdown }) {
     total,
   } = breakdown;
 
-  const appliedBase = base + streakBonus;
-  const baseLabel =
-    streakMultiplier !== 1
-      ? `base ×${String(streakMultiplier)}`
-      : "base";
-
   const rows: { label: string; value: number; dim?: boolean }[] = [
-    { label: baseLabel, value: appliedBase },
+    { label: "words", value: wordScore },
     ...(speedBonus > 0 ? [{ label: "speed", value: speedBonus }] : []),
     ...(cleanBonus > 0 ? [{ label: "clean run", value: cleanBonus }] : []),
     ...(hintBonus > 0 ? [{ label: "no hints", value: hintBonus }] : []),
@@ -222,11 +214,7 @@ function ScoreBreakdown({ breakdown }: { breakdown: RunBreakdown }) {
             <span
               className={cn(
                 "tabular-nums",
-                row.value < 0
-                  ? "text-destructive"
-                  : row.label.startsWith("base ×0")
-                    ? "text-amber-400"
-                    : "text-foreground",
+                row.value < 0 ? "text-destructive" : "text-foreground",
               )}
             >
               {row.value > 0 ? "+" : ""}

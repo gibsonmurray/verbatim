@@ -27,14 +27,12 @@ type RunSummary = {
   hadMistake: boolean;
   hints: number;
   isNewBest: boolean;
-  streakMultiplier: number;
   wordCount: number;
+  wordScore: number; // accumulated per-word score with streak multipliers already applied
 };
 
 export type RunBreakdown = {
-  base: number;
-  streakMultiplier: number;
-  streakBonus: number;
+  wordScore: number;
   speedBonus: number;
   cleanBonus: number;
   hintBonus: number;
@@ -128,14 +126,58 @@ const saveGameProfile = (profile: GameProfile) => {
   }
 };
 
-export const XP_PER_LEVEL = 10000;
+// ─── Level progression ───────────────────────────────────────────────────────
 
-export const getLevel = (totalXp: number) => Math.floor(totalXp / XP_PER_LEVEL) + 1;
+export const MAX_LEVEL = 100;
 
-export const getLevelProgress = (totalXp: number) => totalXp % XP_PER_LEVEL;
+// XP required to advance from level `n` to level `n+1`.
+// For levels beyond MAX_LEVEL the cost is fixed at xpForStep(MAX_LEVEL).
+const xpForStep = (level: number): number =>
+  Math.round(1000 * Math.pow(Math.min(level, MAX_LEVEL), 0.75));
+
+// LEVEL_THRESHOLDS[i] = total XP needed to reach level i + 1.
+// Index 0 → level 1 (0 XP), index 99 → level 100 (sum of steps 1–99).
+const LEVEL_THRESHOLDS: readonly number[] = (() => {
+  const t: number[] = [0];
+  for (let n = 1; n < MAX_LEVEL; n++) t.push(t[n - 1] + xpForStep(n));
+  return t;
+})();
+
+export const getLevel = (totalXp: number): number => {
+  const capXp = LEVEL_THRESHOLDS[MAX_LEVEL - 1];
+  if (totalXp >= capXp) {
+    return MAX_LEVEL + Math.floor((totalXp - capXp) / xpForStep(MAX_LEVEL));
+  }
+  // Binary search for the highest threshold index ≤ totalXp
+  let lo = 0;
+  let hi = MAX_LEVEL - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (LEVEL_THRESHOLDS[mid] <= totalXp) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo + 1;
+};
+
+// Returns a 0–1 fraction representing progress through the current level.
+export const getLevelProgress = (totalXp: number): number => {
+  const level = getLevel(totalXp);
+  const capXp = LEVEL_THRESHOLDS[MAX_LEVEL - 1];
+
+  if (level >= MAX_LEVEL) {
+    const flatRate = xpForStep(MAX_LEVEL);
+    return ((totalXp - capXp) % flatRate) / flatRate;
+  }
+
+  const xpAtLevel = LEVEL_THRESHOLDS[level - 1];
+  const xpAtNext = LEVEL_THRESHOLDS[level]; // level is 1-indexed; thresholds is 0-indexed
+  return (totalXp - xpAtLevel) / (xpAtNext - xpAtLevel);
+};
+
+// ─── Streak multiplier ───────────────────────────────────────────────────────
 
 // Normal mode: streak 0–2 → 1×, 3–5 → 1.25×, 6–9 → 1.5×, 10–14 → 2×, 15+ → 2.5×
-// Penalty mode (full reveal used): needs 5 clean words just to reach 1×, max 2×
+// Penalty mode (full reveal used): 5 clean words to recover to 1×, max 2×
 export const getStreakMultiplier = (streak: number, penaltyMode: boolean): number => {
   if (penaltyMode) {
     if (streak < 5) return 0.5;
@@ -151,6 +193,11 @@ export const getStreakMultiplier = (streak: number, penaltyMode: boolean): numbe
   return 2.5;
 };
 
+// ─── Run scoring ─────────────────────────────────────────────────────────────
+
+// Each word is worth 100 pts × the streak multiplier active when it was typed.
+export const POINTS_PER_WORD = 100;
+
 const getSpeedBonus = ({ elapsedMs, wordCount }: RunSummary) => {
   if (!wordCount) return 0;
   const wordsPerMinute = wordCount / Math.max(elapsedMs / 60000, 0.1);
@@ -158,8 +205,6 @@ const getSpeedBonus = ({ elapsedMs, wordCount }: RunSummary) => {
 };
 
 export const getRunBreakdown = (run: RunSummary): RunBreakdown => {
-  const base = run.wordCount * 100;
-  const streakBonus = Math.round(base * (run.streakMultiplier - 1));
   const speedBonus = getSpeedBonus(run);
   const cleanBonus = run.hadMistake ? 0 : 250;
   const hintBonus = run.hints === 0 ? 250 : 0;
@@ -168,12 +213,10 @@ export const getRunBreakdown = (run: RunSummary): RunBreakdown => {
   const errorPenalty = run.errorWords * 50;
   const total = Math.max(
     0,
-    base + streakBonus + speedBonus + cleanBonus + hintBonus + bestBonus - hintPenalty - errorPenalty,
+    run.wordScore + speedBonus + cleanBonus + hintBonus + bestBonus - hintPenalty - errorPenalty,
   );
   return {
-    base,
-    streakMultiplier: run.streakMultiplier,
-    streakBonus,
+    wordScore: run.wordScore,
     speedBonus,
     cleanBonus,
     hintBonus,
