@@ -26,7 +26,6 @@ import {
   type Settings,
 } from "./lib/settings";
 import {
-  breakStreak,
   defaultGameProfile,
   getStreakMultiplier,
   loadGameProfile,
@@ -49,7 +48,6 @@ import {
   completeCurrentWordFromSource,
   formatTypedTextCasingFromSourceWords,
   formatTypedTextFromSource,
-  normalizeForComparison,
   normalizeText,
   removeLastTypedCharacter,
   toWords,
@@ -83,21 +81,23 @@ const getNextTabHintIndex = (
 const range = (start: number, end: number) =>
   Array.from({ length: Math.max(0, end - start) }, (_, index) => start + index);
 
+const getCompletedWordCount = (
+  sourceWordCount: number,
+  typedWordCount: number,
+  hasTrailingSpace: boolean,
+  isDone: boolean,
+) =>
+  Math.min(
+    sourceWordCount,
+    Math.max(0, isDone || hasTrailingSpace ? typedWordCount : typedWordCount - 1),
+  );
+
 export default function App() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const wasDoneRef = useRef(false);
-  // Tracks previous currentIndex so the streak effect can detect word completion
-  const prevIndexRef = useRef(0);
-  // Mirrors wordStreak state for synchronous reads in the completion handler
-  const wordStreakRef = useRef(0);
+  const prevCompletedCountRef = useRef(0);
   // Mirrors errorWordIndexes state for synchronous reads in effects
   const errorWordIndexesRef = useRef(new Set<number>());
-  // Tracks every word explicitly hinted during this attempt, even after UI hints hide
-  const hintedWordIndexesRef = useRef(new Set<number>());
-  // Mirrors accumulatedWordScore for synchronous reads in the completion handler
-  const accumulatedWordScoreRef = useRef(0);
-  // Mirrors hadFullReveal for synchronous reads in the word-completion effect
-  const hadFullRevealRef = useRef(false);
 
   const [sourceDraft, setSourceDraft] = useState(
     () => loadLocalSourceText() ?? sampleText,
@@ -128,10 +128,9 @@ export default function App() {
   const [gameProfile, setGameProfile] = useState<GameProfile>(defaultGameProfile);
   const [earnedMedals, setEarnedMedals] = useState<MedalId[]>([]);
   const [xpGained, setXpGained] = useState<number | null>(null);
-  const [wordStreak, setWordStreak] = useState(0);
   const [hadFullReveal, setHadFullReveal] = useState(false);
+  const [fullRevealIndex, setFullRevealIndex] = useState<number | null>(null);
   const [errorWordIndexes, setErrorWordIndexes] = useState<Set<number>>(new Set());
-  const [accumulatedWordScore, setAccumulatedWordScore] = useState(0);
   const [breakdown, setBreakdown] = useState<RunBreakdown | null>(null);
 
   const sourceWords = useMemo(() => toWords(sourceText), [sourceText]);
@@ -159,19 +158,58 @@ export default function App() {
   const elapsedMs =
     finishedElapsedMs ?? (runStartedAt ? Math.max(0, nowMs - runStartedAt) : 0);
   const isTimerRunning = runStartedAt !== null && !stats.isDone;
+  const completedWordCount = getCompletedWordCount(
+    sourceWords.length,
+    typedWords.length,
+    hasTrailingSpace,
+    stats.isDone,
+  );
+  const roundScore = useMemo(() => {
+    let wordScore = 0;
+    let streak = 0;
+
+    for (let index = 0; index < completedWordCount; index += 1) {
+      const isCorrect = wordsMatch(
+        typedWords[index] ?? "",
+        sourceWords[index] ?? "",
+        settings,
+      );
+      const wasHinted = hintedWordIndexes.has(index);
+      const hadWrongCompletion = errorWordIndexes.has(index);
+      const nextStreak =
+        isCorrect && !wasHinted && !hadWrongCompletion ? streak + 1 : 0;
+
+      if (isCorrect) {
+        wordScore +=
+          POINTS_PER_WORD *
+          getStreakMultiplier(
+            nextStreak,
+            fullRevealIndex !== null && index >= fullRevealIndex,
+          );
+      }
+
+      streak = nextStreak;
+    }
+
+    return { wordScore, wordStreak: streak };
+  }, [
+    completedWordCount,
+    errorWordIndexes,
+    fullRevealIndex,
+    hintedWordIndexes,
+    settings,
+    sourceWords,
+    typedWords,
+  ]);
 
   // Keep refs in sync with state for synchronous reads in effects/handlers
-  wordStreakRef.current = wordStreak;
   errorWordIndexesRef.current = errorWordIndexes;
-  hintedWordIndexesRef.current = hintedWordIndexes;
-  accumulatedWordScoreRef.current = accumulatedWordScore;
-  hadFullRevealRef.current = hadFullReveal;
 
-  // Derived: hadMistake is true if any word ever had an error (including corrected)
+  // Derived: hadMistake is true if any word was ever completed incorrectly.
   const hadMistake = errorWordIndexes.size > 0;
-  const streakMultiplier = getStreakMultiplier(wordStreak, hadFullReveal);
+  const streakMultiplier = getStreakMultiplier(roundScore.wordStreak, hadFullReveal);
 
-  const score = stats.isDone && xpGained !== null ? xpGained : accumulatedWordScore;
+  const score = stats.isDone && xpGained !== null ? xpGained : roundScore.wordScore;
 
   useEffect(() => {
     if (activeOverlay !== null) return;
@@ -244,74 +282,43 @@ export default function App() {
     if (matchingEntry) setSelectedSavedSourceId(matchingEntry.id);
   }, [savedSourceEntries, selectedSavedSourceId, sourceText]);
 
-  // Real-time error tracking + word-completion streak updates
+  // Track words that were completed incorrectly at least once this round.
   useEffect(() => {
     if (!runStartedAt) {
-      prevIndexRef.current = currentIndex;
+      prevCompletedCountRef.current = completedWordCount;
       return;
     }
 
-    // Track errors for the word currently being typed.
-    // Use normalized prefix comparison so that punctuation/case settings don't
-    // produce false positives (e.g. typing "its" while source is "it's" with
-    // punctuationSensitive=false should never flag an error).
-    if (!hasTrailingSpace && !stats.isDone) {
-      const currentTypedWord = typedWords[currentIndex] ?? "";
-      const sourceWord = sourceWords[currentIndex] ?? "";
-      if (currentTypedWord.length > 0) {
-        const normalizedTyped = normalizeForComparison(currentTypedWord, settings);
-        const normalizedSource = normalizeForComparison(sourceWord, settings);
-        const hasError = !normalizedSource.startsWith(normalizedTyped);
-        if (hasError && !errorWordIndexesRef.current.has(currentIndex)) {
-          setErrorWordIndexes((prev) => {
-            const next = new Set(prev);
-            next.add(currentIndex);
-            return next;
+    const prevCompletedCount = prevCompletedCountRef.current;
+    if (completedWordCount > prevCompletedCount) {
+      const wrongIndexes = range(prevCompletedCount, completedWordCount).filter(
+        (index) =>
+          !wordsMatch(typedWords[index] ?? "", sourceWords[index] ?? "", settings),
+      );
+
+      if (wrongIndexes.length > 0) {
+        setErrorWordIndexes((previous) => {
+          const next = new Set(previous);
+          wrongIndexes.forEach((index) => {
+            if (index >= 0 && index < sourceWords.length) next.add(index);
           });
-        }
+          return next;
+        });
       }
     }
 
-    // Score accumulation + streak update when a word is completed (currentIndex increased)
-    const prevIndex = prevIndexRef.current;
-    if (currentIndex > prevIndex) {
-      const completedTyped = typedWords[prevIndex] ?? "";
-      const completedExpected = sourceWords[prevIndex] ?? "";
-      const isCorrect = wordsMatch(completedTyped, completedExpected, settings);
-      const wasHinted = hintedWordIndexesRef.current.has(prevIndex);
-
-      // Post-completion streak: 0 on hint/error, +1 on clean word
-      const newStreak = wasHinted || !isCorrect ? 0 : wordStreakRef.current + 1;
-      const wordMultiplier = getStreakMultiplier(newStreak, hadFullRevealRef.current);
-      setAccumulatedWordScore((s) => s + POINTS_PER_WORD * wordMultiplier);
-
-      if (!wasHinted) setWordStreak(newStreak);
-      // wasHinted: setWordStreak(0) was already called in the Tab handler
-    }
-
-    prevIndexRef.current = currentIndex;
+    prevCompletedCountRef.current = completedWordCount;
   }, [
-    typedText,
-    currentIndex,
+    completedWordCount,
     runStartedAt,
-    hasTrailingSpace,
-    stats.isDone,
-    typedWords,
-    sourceWords,
     settings,
+    sourceWords,
+    typedWords,
   ]);
 
   useEffect(() => {
     if (stats.isDone && !wasDoneRef.current) {
       const finalElapsedMs = runStartedAt ? Math.max(0, Date.now() - runStartedAt) : 0;
-
-      // Account for the last word's streak contribution manually, because
-      // currentIndex doesn't increase on the final word (it stays at length-1).
-      const wasLastHinted = hintedWordIndexesRef.current.has(sourceWords.length - 1);
-      const lastWordNewStreak = wasLastHinted ? 0 : wordStreakRef.current + 1;
-      const lastWordMultiplier = getStreakMultiplier(lastWordNewStreak, hadFullReveal);
-      const finalWordScore =
-        accumulatedWordScoreRef.current + POINTS_PER_WORD * lastWordMultiplier;
 
       const completedRun = {
         completedAt: Date.now(),
@@ -326,7 +333,7 @@ export default function App() {
         hadMistake,
         hints: stats.hints,
         isNewBest: savedRun.isNewBest,
-        wordScore: finalWordScore,
+        wordScore: roundScore.wordScore,
         wordCount: sourceWords.length,
       });
 
@@ -360,6 +367,7 @@ export default function App() {
     bestRunKey,
     hadFullReveal,
     hadMistake,
+    roundScore.wordScore,
     runStartedAt,
     sourceWords.length,
     stats.hints,
@@ -376,18 +384,12 @@ export default function App() {
     setIsNewBest(false);
     setEarnedMedals([]);
     setXpGained(null);
-    setWordStreak(0);
     setErrorWordIndexes(new Set());
-    setAccumulatedWordScore(0);
     setBreakdown(null);
-    prevIndexRef.current = 0;
+    prevCompletedCountRef.current = 0;
   };
 
   const resetAttempt = (options: { focus?: boolean } = {}) => {
-    if (runStartedAt !== null && !stats.isDone) {
-      setGameProfile(breakStreak());
-    }
-
     setTypedText("");
     setRevealThrough(-1);
     setRevealRest(false);
@@ -399,13 +401,11 @@ export default function App() {
     setIsNewBest(false);
     setEarnedMedals([]);
     setXpGained(null);
-    setWordStreak(0);
     setHadFullReveal(false);
+    setFullRevealIndex(null);
     setErrorWordIndexes(new Set());
-    setAccumulatedWordScore(0);
     setBreakdown(null);
-    prevIndexRef.current = 0;
-    hintedWordIndexesRef.current = new Set();
+    prevCompletedCountRef.current = 0;
 
     if (options.focus ?? true) {
       window.requestAnimationFrame(() => inputRef.current?.focus());
@@ -510,12 +510,11 @@ export default function App() {
 
     setHintedWordIndexes((previous) => {
       const next = new Set(previous);
-      indexes.forEach((index) => {
-        if (index >= 0 && index < sourceWords.length) next.add(index);
+        indexes.forEach((index) => {
+          if (index >= 0 && index < sourceWords.length) next.add(index);
+        });
+        return next;
       });
-      hintedWordIndexesRef.current = next;
-      return next;
-    });
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -560,8 +559,8 @@ export default function App() {
         setRevealRest(true);
         setRevealThrough((previous) => Math.max(previous, currentIndex));
         markWordHints(range(currentIndex, sourceWords.length));
-        setWordStreak(0);
         setHadFullReveal(true);
+        setFullRevealIndex((previous) => previous ?? currentIndex);
       } else {
         // Single-word hint: resets streak to 1×
         const nextHintIndex = getNextTabHintIndex(
@@ -577,7 +576,6 @@ export default function App() {
               : [nextHintIndex],
           );
           markWordHints([nextHintIndex]);
-          setWordStreak(0);
         }
       }
     }
@@ -638,6 +636,7 @@ export default function App() {
         isTimerRunning={isTimerRunning}
         score={score}
         stats={stats}
+        wordStreak={roundScore.wordStreak}
         streakMultiplier={streakMultiplier}
       />
 

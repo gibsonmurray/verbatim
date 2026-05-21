@@ -14,9 +14,7 @@ export type Medal = {
 };
 
 export type GameProfile = {
-  bestStreak: number;
   completedRuns: number;
-  streak: number;
   totalXp: number;
   unlockedMedals: MedalId[];
 };
@@ -28,7 +26,7 @@ type RunSummary = {
   hints: number;
   isNewBest: boolean;
   wordCount: number;
-  wordScore: number; // accumulated per-word score with streak multipliers already applied
+  wordScore: number; // per-word score with streak multipliers already applied
 };
 
 export type RunBreakdown = {
@@ -71,9 +69,7 @@ export const medals: Record<MedalId, Medal> = {
 };
 
 export const defaultGameProfile: GameProfile = {
-  bestStreak: 0,
   completedRuns: 0,
-  streak: 0,
   totalXp: 0,
   unlockedMedals: [],
 };
@@ -86,12 +82,8 @@ const isGameProfile = (value: unknown): value is GameProfile => {
 
   const profile = value as Partial<GameProfile>;
   return (
-    typeof profile.bestStreak === "number" &&
-    Number.isFinite(profile.bestStreak) &&
     typeof profile.completedRuns === "number" &&
     Number.isFinite(profile.completedRuns) &&
-    typeof profile.streak === "number" &&
-    Number.isFinite(profile.streak) &&
     typeof profile.totalXp === "number" &&
     Number.isFinite(profile.totalXp) &&
     Array.isArray(profile.unlockedMedals)
@@ -107,9 +99,7 @@ export const loadGameProfile = () => {
     if (!isGameProfile(parsed)) return defaultGameProfile;
 
     return {
-      bestStreak: Math.max(0, Math.floor(parsed.bestStreak)),
       completedRuns: Math.max(0, Math.floor(parsed.completedRuns)),
-      streak: Math.max(0, Math.floor(parsed.streak)),
       totalXp: Math.max(0, Math.floor(parsed.totalXp)),
       unlockedMedals: parsed.unlockedMedals.filter(isMedalId),
     };
@@ -199,9 +189,13 @@ export const getStreakMultiplier = (streak: number, penaltyMode: boolean): numbe
 export const POINTS_PER_WORD = 100;
 
 const getSpeedBonus = ({ elapsedMs, wordCount }: RunSummary) => {
-  if (!wordCount) return 0;
-  const wordsPerMinute = wordCount / Math.max(elapsedMs / 60000, 0.1);
-  return Math.min(500, Math.round(wordsPerMinute * 3));
+  if (wordCount < 5) return 0;
+
+  const wordsPerMinute = wordCount / Math.max(elapsedMs / 60000, 0.05);
+  const aboveTargetWpm = Math.max(0, wordsPerMinute - 45);
+  const passageCap = Math.min(500, wordCount * 10);
+
+  return Math.min(passageCap, Math.round(aboveTargetWpm * 4));
 };
 
 export const getRunBreakdown = (run: RunSummary): RunBreakdown => {
@@ -240,27 +234,17 @@ const getUnlockedMedalsForRun = (
   ...(completedRuns >= 5 ? (["five-locks"] as const) : []),
 ];
 
-export const breakStreak = () => {
-  const profile = loadGameProfile();
-  const updated = { ...profile, streak: 0 };
-  saveGameProfile(updated);
-  return updated;
-};
-
 export const saveGameCompletion = (run: RunSummary) => {
   const currentProfile = loadGameProfile();
   const breakdown = getRunBreakdown(run);
   const xpGained = breakdown.total;
   const completedRuns = currentProfile.completedRuns + 1;
-  const streak = currentProfile.streak + 1;
   const nextMedals = getUnlockedMedalsForRun(run, completedRuns);
   const unlockedMedals = Array.from(
     new Set([...currentProfile.unlockedMedals, ...nextMedals]),
   );
   const profile = {
-    bestStreak: Math.max(currentProfile.bestStreak, streak),
     completedRuns,
-    streak,
     totalXp: currentProfile.totalXp + xpGained,
     unlockedMedals,
   };

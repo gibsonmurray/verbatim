@@ -28,6 +28,7 @@ type CommandBarProps = {
   score: number;
   stats: MemorizeStats;
   streakMultiplier: number;
+  wordStreak: number;
 };
 
 function StatItem({ label, value, minWidth }: StatItemProps) {
@@ -55,6 +56,7 @@ export function CommandBar({
   score,
   stats,
   streakMultiplier,
+  wordStreak,
 }: CommandBarProps) {
   const level = getLevel(gameProfile.totalXp);
   const levelProgress = getLevelProgress(gameProfile.totalXp);
@@ -107,7 +109,7 @@ export function CommandBar({
 
       {/* Profile progression */}
       <div className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-        <StatItem label="streak" value={`${gameProfile.streak}`} minWidth="2ch" />
+        <StatItem label="streak" value={`${wordStreak}`} minWidth="2ch" />
         <StatItem label="lvl" value={`${level}`} minWidth="2ch" />
         <div className="h-1.5 w-16 overflow-hidden rounded-full bg-background">
           <div
